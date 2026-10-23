@@ -1,0 +1,39 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cartly
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: cartly
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: cartly_jwt_secret_change_in_prod
+      PORT: 4000
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
