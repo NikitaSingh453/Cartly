@@ -8,6 +8,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart          from './pages/Cart';
 import Orders        from './pages/Orders';
 import ManageProduct from './pages/ManageProduct';
+import Home          from './pages/Home';
 
 function RequireAuth({ children, adminOnly }) {
   const { user } = useAuth();
@@ -23,7 +24,8 @@ function AppRoutes() {
       <Navbar />
       <main className="main-content">
         <Routes>
-          <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/dashboard' : '/catalog'} /> : <Login />} />
+          <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/dashboard' : '/'} /> : <Login />} />
+          <Route path="/"                  element={<Home />} />
           <Route path="/catalog"           element={<Catalog />} />
           <Route path="/products/new"      element={<RequireAuth adminOnly><ManageProduct /></RequireAuth>} />
           <Route path="/products/:id/edit" element={<RequireAuth adminOnly><ManageProduct /></RequireAuth>} />
@@ -31,7 +33,7 @@ function AppRoutes() {
           <Route path="/dashboard"         element={<RequireAuth adminOnly><Dashboard /></RequireAuth>} />
           <Route path="/cart"              element={<RequireAuth><Cart /></RequireAuth>} />
           <Route path="/orders"            element={<RequireAuth><Orders /></RequireAuth>} />
-          <Route path="*"                  element={<Navigate to="/catalog" />} />
+          <Route path="*"                  element={<Navigate to="/" />} />
         </Routes>
       </main>
     </>
