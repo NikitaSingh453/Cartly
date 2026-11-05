@@ -11,7 +11,7 @@ Cartly is a full-stack e-commerce platform for tech and gadgets, featuring an AI
 | Layer     | Technology                          |
 |-----------|-------------------------------------|
 | Frontend  | React 19 + Vite + React Router v6   |
-| Backend   | Spring Boot (Java)                  |
+| Backend   | Spring Boot 3.3.5 (Java 21, Maven)  |
 | Database  | PostgreSQL 15+                      |
 | Auth      | JWT + Spring Security               |
 | Styling   | Custom CSS (Inter font, light theme)|
@@ -22,7 +22,20 @@ Cartly is a full-stack e-commerce platform for tech and gadgets, featuring an AI
 
 ```
 cartly/
-├── backend/                   # Spring Boot backend (Java) — in progress
+├── backend/                        # Spring Boot backend (Java 21, Maven)
+│   ├── src/main/java/com/cartly/api/
+│   │   ├── config/                 # SecurityConfig, CorsConfig
+│   │   ├── security/               # JwtUtil, JwtAuthFilter, UserPrincipal
+│   │   ├── entity/                 # JPA entities (10 tables + 3 views)
+│   │   ├── repository/             # Spring Data JPA repositories
+│   │   ├── dto/                    # Request/response records
+│   │   ├── service/                # Business logic
+│   │   ├── controller/             # REST controllers
+│   │   └── exception/              # GlobalExceptionHandler
+│   ├── src/main/resources/
+│   │   └── application.properties
+│   ├── pom.xml
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
@@ -40,31 +53,51 @@ cartly/
 │   │   ├── api.js                   # HTTP client wrapper
 │   │   └── index.css                # Design system + all styles
 │   └── package.json
-└── database/
-    ├── schema.sql    # All tables, indexes, views
-    └── seed.sql      # Sample products, customers, orders
+├── database/
+│   ├── schema.sql    # All tables, indexes, views
+│   └── seed.sql      # Sample products, customers, orders
+└── docker-compose.yml
 ```
 
 ---
 
 ## Prerequisites
 
-Make sure you have these installed:
+**Option A — Docker (recommended):**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-**Frontend:**
-- [Node.js](https://nodejs.org/) v18+
-- npm (comes with Node)
-
-**Backend:**
-- Java 17+
-- Maven or Gradle
-- [PostgreSQL](https://www.postgresql.org/) v15+
+**Option B — Local development:**
+- Java 21+
+- Maven 3.9+
+- Node.js 18+ and npm
+- PostgreSQL 15+
 
 ---
 
-## Database Setup
+## Option A — Run Everything with Docker
 
-Run these once on your local PostgreSQL:
+```bash
+# From the repo root
+docker-compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:4000
+- Health check: http://localhost:4000/health
+
+> First build takes a few minutes — Maven downloads all Spring Boot dependencies inside the container.
+
+To stop:
+
+```bash
+docker-compose down
+```
+
+---
+
+## Option B — Run Locally (two terminals)
+
+### 1. Database setup
 
 ```bash
 # Create the postgres role (if it doesn't exist)
@@ -78,13 +111,20 @@ psql -U postgres -d cartly -f database/schema.sql
 psql -U postgres -d cartly -f database/seed.sql
 ```
 
----
+### 2. Backend (Terminal 1)
 
-## Running the Frontend
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+Backend runs at **http://localhost:4000**
+
+### 3. Frontend (Terminal 2)
 
 ```bash
 cd frontend
-npm install
+npm install     # first time only
 npm run dev
 ```
 
@@ -92,19 +132,19 @@ Frontend runs at **http://localhost:5173**
 
 ---
 
-## Running the Backend
+## Environment Variables (Backend)
 
-> Backend is being migrated to Spring Boot. Instructions will be updated once ready.
+All have defaults — only override for production:
 
-Expected configuration in `application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/cartly
-spring.datasource.username=postgres
-spring.datasource.password=postgres
-spring.jpa.hibernate.ddl-auto=validate
-server.port=4000
-```
+| Variable      | Default                              | Description          |
+|---------------|--------------------------------------|----------------------|
+| `DB_HOST`     | `localhost`                          | PostgreSQL host      |
+| `DB_PORT`     | `5432`                               | PostgreSQL port      |
+| `DB_NAME`     | `cartly`                             | Database name        |
+| `DB_USER`     | `postgres`                           | Database user        |
+| `DB_PASSWORD` | `postgres`                           | Database password    |
+| `JWT_SECRET`  | `cartly_jwt_secret_change_in_prod`   | JWT signing key      |
+| `PORT`        | `4000`                               | Server port          |
 
 ---
 
@@ -120,21 +160,26 @@ server.port=4000
 
 ## API Endpoints
 
-| Method | Endpoint            | Description               | Auth     |
-|--------|---------------------|---------------------------|----------|
-| POST   | /auth/register      | Register new customer     | —        |
-| POST   | /auth/login         | Login, returns JWT        | —        |
-| GET    | /products           | List products (filterable)| —        |
-| GET    | /products/:id       | Product detail            | —        |
-| POST   | /products           | Create product            | Admin    |
-| PUT    | /products/:id       | Update product            | Admin    |
-| GET    | /categories         | List categories           | —        |
-| GET    | /orders             | Customer's orders         | Customer |
-| POST   | /orders             | Place new order           | Customer |
-| POST   | /payments           | Record payment            | Customer |
-| GET    | /reviews/:productId | Product reviews           | —        |
-| POST   | /reviews            | Submit review             | Customer |
-| GET    | /dashboard          | Admin stats               | Admin    |
+| Method | Endpoint                  | Description                | Auth     |
+|--------|---------------------------|----------------------------|----------|
+| POST   | /auth/register            | Register new customer      | —        |
+| POST   | /auth/login               | Login, returns JWT         | —        |
+| GET    | /products                 | List products (filterable) | —        |
+| GET    | /products/:id             | Product detail + reviews   | —        |
+| POST   | /products                 | Create product             | Admin    |
+| PUT    | /products/:id             | Update product             | Admin    |
+| GET    | /categories               | List categories            | —        |
+| GET    | /suppliers                | List suppliers             | —        |
+| GET    | /orders                   | List orders                | Customer |
+| POST   | /orders                   | Place new order            | Customer |
+| GET    | /orders/:id               | Order detail               | Customer |
+| PATCH  | /orders/:id/cancel        | Cancel order               | Customer |
+| POST   | /payments                 | Record payment             | Customer |
+| GET    | /reviews/product/:id      | Product reviews            | —        |
+| POST   | /reviews                  | Submit review              | Customer |
+| GET    | /dashboard                | Admin stats                | Admin    |
+| GET    | /dashboard/categories     | Sales by category          | Admin    |
+| GET    | /health                   | Health check               | —        |
 
 ---
 
