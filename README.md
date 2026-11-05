@@ -161,10 +161,3 @@ server.port=4000
 - **Border radius:** 12–16px
 
 ---
-
-## Team
-
-| Area     | Owner      |
-|----------|------------|
-| Backend  | @I578476   |
-| Frontend | TBD        |
