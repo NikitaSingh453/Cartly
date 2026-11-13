@@ -1,13 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 
 export default function Catalog() {
-  const [products, setProducts]   = useState([]);
+  const [searchParams] = useSearchParams();
+  const [products, setProducts]     = useState([]);
   const [categories, setCategories] = useState([]);
-  const [total, setTotal]         = useState(0);
-  const [loading, setLoading]     = useState(false);
-  const [filters, setFilters]     = useState({ search: '', category: '', min_price: '', max_price: '', page: 1 });
+  const [total, setTotal]           = useState(0);
+  const [loading, setLoading]       = useState(false);
+  const [filters, setFilters]       = useState({
+    search:    searchParams.get('search') || '',
+    category:  '',
+    min_price: '',
+    max_price: '',
+    page:      1,
+  });
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -33,27 +40,34 @@ export default function Catalog() {
   useEffect(() => { api.get('/categories').then(c => setCategories(c)).catch(() => {}); }, []);
 
   const set = (k) => (e) => setFilters(f => ({ ...f, [k]: e.target.value, page: 1 }));
-
   const totalPages = Math.ceil(total / 12);
 
   return (
     <div className="page">
-      <h1 className="page-title">Products</h1>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 className="page-title" style={{ marginBottom: '.25rem' }}>Shop</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '.875rem' }}>
+          Discover {total > 0 ? total : ''} products across all categories
+        </p>
+      </div>
 
       <div className="filter-bar">
-        <input
-          className="filter-search"
-          placeholder="Search gadgets…"
-          value={filters.search}
-          onChange={set('search')}
-        />
-        <select value={filters.category} onChange={set('category')}>
+        <div className="filter-search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: '.75rem', color: 'var(--text-muted)', fontSize: '.875rem', pointerEvents: 'none' }}>🔍</span>
+          <input
+            style={{ paddingLeft: '2.2rem' }}
+            placeholder="Search gadgets, brands…"
+            value={filters.search}
+            onChange={set('search')}
+          />
+        </div>
+        <select value={filters.category} onChange={set('category')} style={{ width: '180px' }}>
           <option value="">All Categories</option>
-          {categories.filter(c => !c.parent_id).map(c => (
-            <option key={c.category_id} value={c.category_id}>{c.name}</option>
+          {categories.filter(c => !c.parentId).map(c => (
+            <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
           ))}
-          {categories.filter(c => c.parent_id).map(c => (
-            <option key={c.category_id} value={c.category_id}>└ {c.name}</option>
+          {categories.filter(c => c.parentId).map(c => (
+            <option key={c.categoryId} value={c.categoryId}>  {c.name}</option>
           ))}
         </select>
         <input className="filter-price" placeholder="Min ₹" type="number" value={filters.min_price} onChange={set('min_price')} />
@@ -61,20 +75,44 @@ export default function Catalog() {
       </div>
 
       {loading ? (
-        <div className="loading">Loading…</div>
+        <div className="loading">Loading products…</div>
       ) : (
         <>
-          <p className="result-count">{total} product{total !== 1 ? 's' : ''} found</p>
-          <div className="product-grid">
-            {products.map(p => <ProductCard key={p.product_id} p={p} />)}
-            {products.length === 0 && <p className="empty">No products found.</p>}
-          </div>
+          <p className="result-count">
+            {total} product{total !== 1 ? 's' : ''} found
+            {filters.search && <> for "<strong>{filters.search}</strong>"</>}
+          </p>
+
+          {products.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🔍</div>
+              <h3>No products found</h3>
+              <p>Try adjusting your filters or searching for something else.</p>
+              <button className="btn-secondary" onClick={() => setFilters({ search: '', category: '', min_price: '', max_price: '', page: 1 })}>
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="product-grid">
+              {products.map(p => <ProductCard key={p.productId || p.product_id} p={p} />)}
+            </div>
+          )}
 
           {totalPages > 1 && (
             <div className="pagination">
-              <button disabled={filters.page === 1} onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}>← Prev</button>
+              <button
+                disabled={filters.page === 1}
+                onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}
+              >
+                ← Previous
+              </button>
               <span>Page {filters.page} of {totalPages}</span>
-              <button disabled={filters.page === totalPages} onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}>Next →</button>
+              <button
+                disabled={filters.page === totalPages}
+                onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
+              >
+                Next →
+              </button>
             </div>
           )}
         </>
@@ -87,45 +125,74 @@ function Stars({ rating }) {
   return (
     <span className="stars">
       {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#f59e0b' : '#d1d5db' }}>★</span>
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#f59e0b' : '#D4D4D8' }}>★</span>
       ))}
     </span>
   );
 }
 
-function ProductCard({ p }) {
+export function ProductCard({ p }) {
+  const id    = p.productId || p.product_id;
+  const name  = p.name;
+  const qty   = p.quantityOnHand ?? p.quantity_on_hand;
+  const price = p.price;
+  const cat   = p.categoryName || p.category_name;
+  const sup   = p.supplierName || p.supplier_name;
+  const avg   = p.avgRating    || p.avg_rating    || 0;
+  const cnt   = p.reviewCount  || p.review_count  || 0;
+  const active = p.isActive    ?? p.is_active     ?? true;
+
   return (
-    <Link to={`/products/${p.product_id}`} className="product-card">
+    <Link to={`/products/${id}`} className="product-card">
       <div className="product-img-wrap">
-        <div className="product-img-placeholder">
-          {categoryIcon(p.category_name)}
+        <div className="product-img-placeholder" style={{ background: categoryGradient(cat) }}>
+          <span style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,.18))', transition: 'transform .2s ease' }}>
+            {categoryIcon(cat)}
+          </span>
         </div>
-        {!p.is_active && <span className="badge-inactive">Inactive</span>}
-        {p.quantity_on_hand <= 5 && p.quantity_on_hand > 0 && (
-          <span className="badge-lowstock">Only {p.quantity_on_hand} left</span>
-        )}
-        {p.quantity_on_hand === 0 && <span className="badge-oos">Out of stock</span>}
+        {!active && <span className="badge-inactive">Inactive</span>}
+        {qty <= 5 && qty > 0 && <span className="badge-lowstock">Only {qty} left</span>}
+        {qty === 0 && <span className="badge-oos">Out of stock</span>}
       </div>
       <div className="product-info">
-        <p className="product-category">{p.category_name}</p>
-        <h3 className="product-name">{p.name}</h3>
+        <p className="product-category">{cat}</p>
+        <h3 className="product-name">{name}</h3>
         <div className="product-meta">
-          <Stars rating={p.avg_rating} />
-          <span className="review-count">({p.review_count})</span>
+          <Stars rating={avg} />
+          <span className="review-count">({cnt})</span>
         </div>
         <div className="product-footer">
-          <span className="product-price">₹{Number(p.price).toLocaleString('en-IN')}</span>
-          <span className="supplier-badge">{p.supplier_name}</span>
+          <span className="product-price">₹{Number(price).toLocaleString('en-IN')}</span>
+          <span className="supplier-badge">{sup}</span>
         </div>
       </div>
     </Link>
   );
 }
 
-function categoryIcon(cat) {
-  const icons = {
+export function categoryIcon(cat) {
+  const map = {
     Smartphones: '📱', Laptops: '💻', Tablets: '📲', Audio: '🎧',
     Wearables: '⌚', Cameras: '📷', Accessories: '🖱️', Electronics: '⚡',
+    Gaming: '🎮', Storage: '💾', Networking: '📡', Monitors: '🖥️',
   };
-  return icons[cat] || '📦';
+  return map[cat] || '📦';
+}
+
+export function categoryGradient(cat) {
+  const map = {
+    Smartphones: 'linear-gradient(145deg, #E8F0FE 0%, #C7D7FC 100%)',
+    Laptops:     'linear-gradient(145deg, #F0F4FF 0%, #D9E3FF 100%)',
+    Tablets:     'linear-gradient(145deg, #EDE9FE 0%, #D4CAFE 100%)',
+    Audio:       'linear-gradient(145deg, #FFF7ED 0%, #FDE8C8 100%)',
+    Wearables:   'linear-gradient(145deg, #F0FDF4 0%, #BBFCD0 100%)',
+    Cameras:     'linear-gradient(145deg, #FFF1F2 0%, #FFD1D6 100%)',
+    Accessories: 'linear-gradient(145deg, #F0F9FF 0%, #BFEDFF 100%)',
+    Electronics: 'linear-gradient(145deg, #FEFCE8 0%, #FEF08A 100%)',
+    Gaming:      'linear-gradient(145deg, #FDF4FF 0%, #EDCAFE 100%)',
+    Storage:     'linear-gradient(145deg, #F0FDF4 0%, #C8F7DC 100%)',
+    Networking:  'linear-gradient(145deg, #EFF6FF 0%, #BFDBFE 100%)',
+    Monitors:    'linear-gradient(145deg, #F8FAFC 0%, #E2E8F0 100%)',
+  };
+  return map[cat] || 'linear-gradient(145deg, #F4F4F5 0%, #E4E4E7 100%)';
 }

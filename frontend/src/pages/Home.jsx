@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import CartlyLogo from '../components/CartlyLogo';
 
 const CATEGORIES = [
   { name: 'Smartphones',  icon: '📱', color: '#EEF2FF', count: '120+ products' },
@@ -313,7 +314,7 @@ export default function Home() {
       <footer className="footer">
         <div className="footer-inner">
           <div>
-            <div className="footer-logo">⚡ Cartly</div>
+            <div className="footer-logo"><CartlyLogo size={22} dark /> Cartly</div>
             <p className="footer-tagline">Discover more. Shop smarter. Your AI-powered destination for tech and gadgets.</p>
             <div className="footer-newsletter">
               <input type="email" placeholder="Your email address" />

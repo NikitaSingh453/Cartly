@@ -27,19 +27,19 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             LEFT JOIN inventory i ON i.product_id = p.product_id
             LEFT JOIN product_rating_view r ON r.product_id = p.product_id
             WHERE p.is_active = TRUE
-              AND (:search IS NULL OR p.name ILIKE :search OR p.description ILIKE :search)
-              AND (:categoryId IS NULL OR p.category_id = :categoryId)
-              AND (:minPrice IS NULL OR p.price >= :minPrice)
-              AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+              AND (CAST(:search AS text) IS NULL OR p.name ILIKE :search OR p.description ILIKE :search)
+              AND (CAST(:categoryId AS integer) IS NULL OR p.category_id = :categoryId)
+              AND (CAST(:minPrice AS numeric) IS NULL OR p.price >= CAST(:minPrice AS numeric))
+              AND (CAST(:maxPrice AS numeric) IS NULL OR p.price <= CAST(:maxPrice AS numeric))
             ORDER BY p.created_at DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM product p
             WHERE p.is_active = TRUE
-              AND (:search IS NULL OR p.name ILIKE :search OR p.description ILIKE :search)
-              AND (:categoryId IS NULL OR p.category_id = :categoryId)
-              AND (:minPrice IS NULL OR p.price >= :minPrice)
-              AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+              AND (CAST(:search AS text) IS NULL OR p.name ILIKE :search OR p.description ILIKE :search)
+              AND (CAST(:categoryId AS integer) IS NULL OR p.category_id = :categoryId)
+              AND (CAST(:minPrice AS numeric) IS NULL OR p.price >= CAST(:minPrice AS numeric))
+              AND (CAST(:maxPrice AS numeric) IS NULL OR p.price <= CAST(:maxPrice AS numeric))
             """,
             nativeQuery = true)
     Page<Object[]> findProductsFiltered(

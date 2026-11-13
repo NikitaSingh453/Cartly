@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import CartlyLogo from '../components/CartlyLogo';
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -32,7 +33,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <span className="logo-icon">⚡</span>
+          <CartlyLogo size={32} />
           <span className="logo-text">Cartly</span>
         </div>
         <p className="auth-sub">Tech & Gadgets Store</p>
