@@ -40,6 +40,7 @@ export default function Navbar() {
       <div className="nav-links">
         {user?.role === 'admin' ? (
           <>
+            <Link to="/">Home</Link>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/catalog">Catalog</Link>
             <Link to="/products/new">+ Add Product</Link>

@@ -1,6 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CartlyLogo from '../components/CartlyLogo';
+import { api } from '../api';
+import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
+import { useAuth } from '../AuthContext';
 
 const CATEGORIES = [
   { name: 'Smartphones',  icon: '📱', color: '#EEF2FF', count: '120+ products' },
@@ -11,37 +14,12 @@ const CATEGORIES = [
   { name: 'Accessories',  icon: '🖱️', color: '#F0F9FF', count: '200+ products' },
 ];
 
-const TRENDING = [
-  { id: 9,  brand: 'Sony',     name: 'WH-1000XM5 Headphones',     price: 29990, original: 34990, rating: 4.8, reviews: 2341, badge: 'Bestseller', color: '#1a1a2e', emoji: '🎧' },
-  { id: 2,  brand: 'Apple',    name: 'iPhone 15 Pro Max',          price: 159900,                 rating: 4.9, reviews: 1823, badge: 'New',        color: '#F5F5F7', emoji: '📱' },
-  { id: 13, brand: 'Logitech', name: 'MX Master 3S Mouse',         price: 8995,  original: 10995, rating: 4.7, reviews: 987,  badge: 'AI Pick',    color: '#e8f4ff', emoji: '🖱️' },
-  { id: 5,  brand: 'Apple',    name: 'MacBook Pro 14" M3 Pro',     price: 199900,                 rating: 4.9, reviews: 3102, badge: 'Bestseller', color: '#f5f5f7', emoji: '💻' },
-  { id: 11, brand: 'Apple',    name: 'Watch Series 9 45mm',        price: 44900, original: 49900, rating: 4.8, reviews: 1456, badge: 'New',        color: '#e8f0fe', emoji: '⌚' },
-  { id: 17, brand: 'Apple',    name: 'AirPods Pro (2nd Gen)',       price: 24900, original: 26900, rating: 4.9, reviews: 4210, badge: 'Bestseller', color: '#fff9f0', emoji: '🎵' },
-  { id: 18, brand: 'Asus',     name: 'ROG Strix G16 Gaming',       price: 159999,                 rating: 4.7, reviews: 632,  badge: 'AI Pick',    color: '#1a0a2e', emoji: '🎮' },
-  { id: 1,  brand: 'Samsung',  name: 'Galaxy S24 Ultra',           price: 134999, original: 144999, rating: 4.8, reviews: 2876, badge: 'New',      color: '#0a192f', emoji: '📱' },
-];
-
-const AI_PICKS = [
-  { id: 9,  brand: 'Sony',   name: 'WH-1000XM5',      price: 29990, emoji: '🎧', color: '#1a1a2e', reason: 'Based on your audio interests' },
-  { id: 13, brand: 'Logi',   name: 'MX Master 3S',    price: 8995,  emoji: '🖱️', color: '#e8f4ff', reason: 'Perfect for your setup' },
-  { id: 5,  brand: 'Apple',  name: 'MacBook Pro M3',  price: 199900, emoji: '💻', color: '#f5f5f7', reason: 'Matches your usage pattern' },
-  { id: 17, brand: 'Apple',  name: 'AirPods Pro 2',   price: 24900, emoji: '🎵', color: '#fff9f0', reason: 'Trending in your category' },
-];
-
 const TRUST = [
   { icon: '🔒', title: 'Secure Checkout',       desc: 'End-to-end encrypted payments for peace of mind.' },
   { icon: '✅', title: 'Genuine Products',       desc: 'Every product sourced directly from verified suppliers.' },
   { icon: '📦', title: 'Order Tracking',         desc: 'Real-time updates on every order from dispatch to door.' },
   { icon: '🤖', title: 'AI-Powered Discovery',   desc: 'Find the right gadget faster with multimodal search.' },
 ];
-
-function badgeClass(badge) {
-  if (badge === 'Bestseller') return 'badge-bestseller';
-  if (badge === 'New')        return 'badge-new';
-  if (badge === 'AI Pick')    return 'badge-ai-pick';
-  return '';
-}
 
 function Stars({ rating }) {
   const full = Math.floor(rating);
@@ -56,13 +34,18 @@ function Stars({ rating }) {
 function ProductCard({ p }) {
   const navigate = useNavigate();
   const [wished, setWished] = useState(false);
-  const discount = p.original ? Math.round((1 - p.price / p.original) * 100) : null;
+  const id    = p.productId || p.product_id || p.id;
+  const cat   = p.categoryName || p.category_name || '';
+  const avg   = p.avgRating   || p.avg_rating   || 0;
+  const cnt   = p.reviewCount || p.review_count || 0;
+  const sup   = p.supplierName || p.supplier_name || p.brand || '';
 
   return (
-    <div className="home-product-card" onClick={() => navigate(`/products/${p.id}`)}>
-      <div className="home-product-img" style={{ background: p.color }}>
-        <span>{p.emoji}</span>
-        {p.badge && <span className={`home-product-badge ${badgeClass(p.badge)}`}>{p.badge}</span>}
+    <div className="home-product-card" onClick={() => navigate(`/products/${id}`)}>
+      <div className="home-product-img" style={{ background: categoryGradient(cat) }}>
+        <span style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,.18))' }}>
+          {categoryIcon(cat)}
+        </span>
         <button
           className="home-product-wishlist"
           onClick={e => { e.stopPropagation(); setWished(w => !w); }}
@@ -72,16 +55,14 @@ function ProductCard({ p }) {
         </button>
       </div>
       <div className="home-product-body">
-        <div className="home-product-brand">{p.brand}</div>
+        <div className="home-product-brand">{sup}</div>
         <div className="home-product-name">{p.name}</div>
         <div className="home-product-rating">
-          <Stars rating={p.rating} />
-          <span>{p.rating} ({p.reviews.toLocaleString()})</span>
+          <Stars rating={avg} />
+          <span>{avg > 0 ? `${avg} (${cnt.toLocaleString()})` : 'No reviews yet'}</span>
         </div>
         <div className="home-product-price-row">
-          <span className="home-product-price">₹{p.price.toLocaleString()}</span>
-          {p.original && <span className="home-product-original">₹{p.original.toLocaleString()}</span>}
-          {discount && <span className="home-product-discount">{discount}% off</span>}
+          <span className="home-product-price">₹{Number(p.price).toLocaleString('en-IN')}</span>
         </div>
       </div>
       <div className="home-product-footer">
@@ -90,9 +71,9 @@ function ProductCard({ p }) {
           onClick={e => {
             e.stopPropagation();
             const cart = JSON.parse(localStorage.getItem('cartly_cart') || '[]');
-            const existing = cart.find(i => i.id === p.id);
+            const existing = cart.find(i => i.product_id === id);
             if (existing) { existing.quantity += 1; }
-            else { cart.push({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, quantity: 1 }); }
+            else { cart.push({ product_id: id, name: p.name, price: p.price, quantity: 1 }); }
             localStorage.setItem('cartly_cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('storage'));
           }}
@@ -106,9 +87,20 @@ function ProductCard({ p }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [recording, setRecording] = useState(false);
+  const [trending, setTrending] = useState([]);
+  const [aiPicks, setAiPicks] = useState([]);
+
+  useEffect(() => {
+    api.get('/products?limit=8&page=1').then(data => {
+      const products = data.products || [];
+      setTrending(products.slice(0, 8));
+      setAiPicks(products.slice(0, 4));
+    }).catch(() => {});
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -137,14 +129,16 @@ export default function Home() {
           <div className="hero-left">
             <div className="hero-eyebrow">
               <span className="hero-eyebrow-dot" />
-              THE FUTURE OF SHOPPING
+              {user ? `WELCOME BACK, ${user.name?.split(' ')[0].toUpperCase()}` : 'THE FUTURE OF SHOPPING'}
             </div>
             <h1 className="hero-title">
-              Discover more.<br />
-              <span>Shop smarter.</span>
+              {user ? <>Your next great<br /><span>find awaits.</span></> : <>Discover more.<br /><span>Shop smarter.</span></>}
             </h1>
             <p className="hero-sub">
-              Search with words, a picture, or your voice. Let Cartly help you find the right tech for you.
+              {user
+                ? `Hey ${user.name?.split(' ')[0]}! Search by text, image or voice — your cart and orders are always saved.`
+                : 'Search with words, a picture, or your voice. Let Cartly help you find the right tech for you.'
+              }
             </p>
 
             {/* Multimodal search */}
@@ -193,7 +187,16 @@ export default function Home() {
 
             <div className="hero-cta-row">
               <Link to="/catalog"><button className="btn-primary">Explore gadgets</button></Link>
-              <button className="btn-secondary">How AI shopping works</button>
+              {user ? (
+                <>
+                  <Link to="/orders"><button className="btn-secondary">My Orders</button></Link>
+                  <Link to="/cart"><button className="btn-secondary">My Cart</button></Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login"><button className="btn-secondary">Sign In</button></Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -216,6 +219,20 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Customer Quick Access ─────────────────────────────────────────── */}
+      {user && user.role !== 'admin' && (
+        <section style={{ background: 'var(--accent)', borderBottom: '1.5px solid var(--border)' }}>
+          <div style={{ maxWidth: 1180, margin: '0 auto', padding: '.9rem 2rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: '.875rem', color: 'var(--accent-fg)', flex: 1 }}>
+              👋 Hey {user.name?.split(' ')[0]}, ready to shop?
+            </span>
+            <Link to="/catalog" style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>🛍️ Browse Shop</Link>
+            <Link to="/cart"    style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>🛒 My Cart</Link>
+            <Link to="/orders"  style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>📦 My Orders</Link>
+          </div>
+        </section>
+      )}
 
       {/* ── Categories ───────────────────────────────────────────────────── */}
       <section className="home-section">
@@ -250,7 +267,7 @@ export default function Home() {
             <Link to="/catalog" className="section-link">View all →</Link>
           </div>
           <div className="trending-grid">
-            {TRENDING.map(p => <ProductCard key={p.id} p={p} />)}
+            {trending.map(p => <ProductCard key={p.productId || p.product_id} p={p} />)}
           </div>
         </div>
       </section>
@@ -267,32 +284,40 @@ export default function Home() {
             <Link to="/catalog" className="section-link">See more picks →</Link>
           </div>
           <div className="trending-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {AI_PICKS.map(p => (
-              <div
-                key={p.id}
-                className="home-product-card"
-                onClick={() => navigate(`/products/${p.id}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="home-product-img" style={{ background: p.color }}>
-                  <span>{p.emoji}</span>
-                  <span className="home-product-badge badge-ai-pick">AI Pick</span>
-                </div>
-                <div className="home-product-body">
-                  <div className="home-product-brand">{p.brand}</div>
-                  <div className="home-product-name">{p.name}</div>
-                  <div style={{ fontSize: '.78rem', color: 'var(--purple)', marginTop: '.2rem' }}>✨ {p.reason}</div>
-                  <div className="home-product-price-row">
-                    <span className="home-product-price">₹{p.price.toLocaleString()}</span>
+            {aiPicks.map(p => {
+              const id  = p.productId || p.product_id;
+              const cat = p.categoryName || p.category_name || '';
+              return (
+                <div
+                  key={id}
+                  className="home-product-card"
+                  onClick={() => navigate(`/products/${id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="home-product-img" style={{ background: categoryGradient(cat) }}>
+                    <span style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,.18))' }}>
+                      {categoryIcon(cat)}
+                    </span>
+                    <span className="home-product-badge badge-ai-pick">AI Pick</span>
+                  </div>
+                  <div className="home-product-body">
+                    <div className="home-product-brand">{p.supplierName || p.supplier_name || ''}</div>
+                    <div className="home-product-name">{p.name}</div>
+                    <div style={{ fontSize: '.78rem', color: 'var(--purple)', marginTop: '.2rem' }}>✨ Recommended for you</div>
+                    <div className="home-product-price-row">
+                      <span className="home-product-price">₹{Number(p.price).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                  <div className="home-product-footer">
+                    <button className="btn-add-cart" style={{ background: 'var(--purple)' }}
+                      onClick={e => { e.stopPropagation(); navigate(`/products/${id}`); }}
+                    >
+                      View Product
+                    </button>
                   </div>
                 </div>
-                <div className="home-product-footer">
-                  <Link to={`/products/${p.id}`} style={{ display: 'block', width: '100%' }}>
-                    <button className="btn-add-cart" style={{ background: 'var(--purple)' }}>View Product</button>
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

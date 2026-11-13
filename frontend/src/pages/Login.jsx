@@ -16,12 +16,16 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    if (mode === 'register' && form.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     setLoading(true);
     try {
       const user = mode === 'login'
         ? await login(form.email, form.password)
         : await register(form.name, form.email, form.phone, form.password);
-      navigate(user.role === 'admin' ? '/dashboard' : '/catalog');
+      navigate(user.role === 'admin' ? '/dashboard' : '/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,7 +62,10 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="auth-hint">Demo — admin@cartly.com / password123</p>
+        <p className="auth-hint">
+          Admin: admin@cartly.com / password123<br />
+          Customer: riya@example.com / password123
+        </p>
       </div>
     </div>
   );

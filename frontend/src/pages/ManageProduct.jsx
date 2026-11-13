@@ -8,8 +8,8 @@ export default function ManageProduct() {
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers]   = useState([]);
   const [form, setForm] = useState({
-    sku: '', name: '', description: '', price: '', category_id: '', supplier_id: '',
-    quantity_on_hand: '', reorder_level: '10', is_active: true,
+    sku: '', name: '', description: '', price: '', categoryId: '', supplierId: '',
+    quantityOnHand: '', reorderLevel: '10', isActive: true,
   });
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,9 +24,9 @@ export default function ManageProduct() {
     if (id) {
       api.get(`/products/${id}`).then(p => setForm({
         sku: p.sku, name: p.name, description: p.description || '',
-        price: p.price, category_id: p.category_id, supplier_id: p.supplier_id,
-        quantity_on_hand: p.quantity_on_hand, reorder_level: p.reorder_level,
-        is_active: p.is_active,
+        price: p.price, categoryId: p.categoryId, supplierId: p.supplierId,
+        quantityOnHand: p.quantityOnHand, reorderLevel: p.reorderLevel,
+        isActive: p.isActive,
       })).catch(console.error);
     }
   }, [id]);
@@ -39,12 +39,12 @@ export default function ManageProduct() {
     setLoading(true);
     try {
       if (id) {
-        await api.put(`/products/${id}`, { ...form, price: parseFloat(form.price), category_id: parseInt(form.category_id), supplier_id: parseInt(form.supplier_id), quantity_on_hand: parseInt(form.quantity_on_hand), reorder_level: parseInt(form.reorder_level) });
+        await api.put(`/products/${id}`, { ...form, price: parseFloat(form.price), categoryId: parseInt(form.categoryId), supplierId: parseInt(form.supplierId), quantityOnHand: parseInt(form.quantityOnHand), reorderLevel: parseInt(form.reorderLevel) });
         setMsg('Product updated!');
       } else {
-        await api.post('/products', { ...form, price: parseFloat(form.price), category_id: parseInt(form.category_id), supplier_id: parseInt(form.supplier_id), quantity_on_hand: parseInt(form.quantity_on_hand), reorder_level: parseInt(form.reorder_level) });
+        await api.post('/products', { ...form, price: parseFloat(form.price), categoryId: parseInt(form.categoryId), supplierId: parseInt(form.supplierId), quantityOnHand: parseInt(form.quantityOnHand), reorderLevel: parseInt(form.reorderLevel) });
         setMsg('Product created!');
-        setForm({ sku: '', name: '', description: '', price: '', category_id: '', supplier_id: '', quantity_on_hand: '', reorder_level: '10', is_active: true });
+        setForm({ sku: '', name: '', description: '', price: '', categoryId: '', supplierId: '', quantityOnHand: '', reorderLevel: '10', isActive: true });
       }
     } catch (err) {
       setMsg(err.message);
@@ -70,26 +70,26 @@ export default function ManageProduct() {
             <input type="number" min="0" step="0.01" value={form.price} onChange={set('price')} required />
           </label>
           <label>Category *
-            <select value={form.category_id} onChange={set('category_id')} required>
+            <select value={form.categoryId} onChange={set('categoryId')} required>
               <option value="">Select category</option>
-              {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
+              {categories.map(c => <option key={c.categoryId} value={c.categoryId}>{c.name}</option>)}
             </select>
           </label>
           <label>Supplier *
-            <select value={form.supplier_id} onChange={set('supplier_id')} required>
+            <select value={form.supplierId} onChange={set('supplierId')} required>
               <option value="">Select supplier</option>
-              {suppliers.map(s => <option key={s.supplier_id} value={s.supplier_id}>{s.name}</option>)}
+              {suppliers.map(s => <option key={s.supplierId} value={s.supplierId}>{s.name}</option>)}
             </select>
           </label>
           <label>Stock Qty
-            <input type="number" min="0" value={form.quantity_on_hand} onChange={set('quantity_on_hand')} />
+            <input type="number" min="0" value={form.quantityOnHand} onChange={set('quantityOnHand')} />
           </label>
           <label>Reorder Level
-            <input type="number" min="0" value={form.reorder_level} onChange={set('reorder_level')} />
+            <input type="number" min="0" value={form.reorderLevel} onChange={set('reorderLevel')} />
           </label>
           {id && (
             <label className="checkbox-label">
-              <input type="checkbox" checked={form.is_active} onChange={set('is_active')} />
+              <input type="checkbox" checked={form.isActive} onChange={set('isActive')} />
               Active
             </label>
           )}

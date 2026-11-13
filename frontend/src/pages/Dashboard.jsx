@@ -20,10 +20,10 @@ export default function Dashboard() {
       <h1 className="page-title">Dashboard</h1>
 
       <div className="stat-grid">
-        <StatCard label="Active Products" value={data.product_count} icon="📦" color="blue" />
-        <StatCard label="Orders Today"    value={data.orders_today}  icon="🛒" color="green" />
-        <StatCard label="Total Revenue"   value={`₹${data.total_revenue.toLocaleString('en-IN')}`} icon="💰" color="purple" />
-        <StatCard label="Low Stock"       value={data.low_stock_count} icon="⚠️" color="red" />
+        <StatCard label="Active Products" value={data.productCount}  icon="📦" color="blue" />
+        <StatCard label="Orders Today"    value={data.ordersToday}   icon="🛒" color="green" />
+        <StatCard label="Total Revenue"   value={`₹${Number(data.totalRevenue).toLocaleString('en-IN')}`} icon="💰" color="purple" />
+        <StatCard label="Low Stock"       value={data.lowStockCount} icon="⚠️" color="red" />
       </div>
 
       <div className="dash-grid">
@@ -32,10 +32,10 @@ export default function Dashboard() {
           <table className="data-table">
             <thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
-              {data.recent_orders.map(o => (
-                <tr key={o.order_id}>
-                  <td>#{o.order_id}</td>
-                  <td>{o.customer}</td>
+              {data.recentOrders.map(o => (
+                <tr key={o.orderId}>
+                  <td>#{o.orderId}</td>
+                  <td>{o.customerName}</td>
                   <td>₹{Number(o.total).toLocaleString('en-IN')}</td>
                   <td><span className={`badge badge-${o.status.toLowerCase()}`}>{o.status}</span></td>
                 </tr>
@@ -47,11 +47,11 @@ export default function Dashboard() {
         <div className="card">
           <h2 className="card-title">Top Sellers</h2>
           <ul className="top-list">
-            {data.top_sellers.map((p, i) => (
-              <li key={p.product_id} className="top-item">
+            {data.topSellers.map((p, i) => (
+              <li key={p.productId} className="top-item">
                 <span className="rank">#{i + 1}</span>
                 <span className="top-name">{p.name}</span>
-                <span className="units">{p.units_sold} sold</span>
+                <span className="units">{p.totalQtySold} sold</span>
               </li>
             ))}
           </ul>
@@ -61,12 +61,12 @@ export default function Dashboard() {
           <h2 className="card-title">Revenue by Category</h2>
           <ul className="cat-list">
             {cats.map(c => (
-              <li key={c.category} className="cat-item">
-                <span className="cat-name">{c.category}</span>
+              <li key={c.categoryName} className="cat-item">
+                <span className="cat-name">{c.categoryName}</span>
                 <div className="cat-bar-wrap">
-                  <div className="cat-bar" style={{ width: `${Math.min(100, (c.revenue / (cats[0]?.revenue || 1)) * 100)}%` }} />
+                  <div className="cat-bar" style={{ width: `${Math.min(100, (c.totalRevenue / (cats[0]?.totalRevenue || 1)) * 100)}%` }} />
                 </div>
-                <span className="cat-rev">₹{Number(c.revenue).toLocaleString('en-IN')}</span>
+                <span className="cat-rev">₹{Number(c.totalRevenue).toLocaleString('en-IN')}</span>
               </li>
             ))}
           </ul>
