@@ -76,7 +76,19 @@ export default function Catalog() {
       </div>
 
       {loading ? (
-        <div className="loading">Loading products…</div>
+        <div className="product-grid">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-img" />
+              <div className="skeleton-body">
+                <div className="skeleton skeleton-line short" />
+                <div className="skeleton skeleton-line long" />
+                <div className="skeleton skeleton-line mid" />
+                <div className="skeleton skeleton-line short" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           <p className="result-count">
@@ -142,6 +154,20 @@ export function ProductCard({ p }) {
   const avg   = p.avgRating    || p.avg_rating    || 0;
   const cnt   = p.reviewCount  || p.review_count  || 0;
   const active = p.isActive    ?? p.is_active     ?? true;
+  const [added, setAdded] = useState(false);
+
+  const addToCart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cart = JSON.parse(localStorage.getItem('cartly_cart') || '[]');
+    const existing = cart.find(i => i.product_id === id);
+    if (existing) { existing.quantity += 1; }
+    else { cart.push({ product_id: id, name, price, quantity: 1 }); }
+    localStorage.setItem('cartly_cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('storage'));
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <Link to={`/products/${id}`} className="product-card">
@@ -154,6 +180,11 @@ export function ProductCard({ p }) {
         {!active && <span className="badge-inactive">Inactive</span>}
         {qty <= 5 && qty > 0 && <span className="badge-lowstock">Only {qty} left</span>}
         {qty === 0 && <span className="badge-oos">Out of stock</span>}
+        {qty !== 0 && active && (
+          <button className={`product-quick-add${added ? ' added' : ''}`} onClick={addToCart}>
+            {added ? '✓ Added to cart' : '+ Add to Cart'}
+          </button>
+        )}
       </div>
       <div className="product-info">
         <p className="product-category">{cat}</p>

@@ -8,7 +8,7 @@ import com.cartly.api.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,24 +22,24 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> placeOrder(@Valid @RequestBody PlaceOrderRequest req,
-                                                           @AuthenticationPrincipal UserPrincipal actor) {
-        return ResponseEntity.status(201).body(orderService.placeOrder(req, actor));
+                                                           Authentication authentication) {
+        return ResponseEntity.status(201).body(orderService.placeOrder(req, (UserPrincipal) authentication));
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderSummaryDto>> listOrders(@AuthenticationPrincipal UserPrincipal actor) {
-        return ResponseEntity.ok(orderService.listOrders(actor));
+    public ResponseEntity<List<OrderSummaryDto>> listOrders(Authentication authentication) {
+        return ResponseEntity.ok(orderService.listOrders((UserPrincipal) authentication));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderDetailResponse> getOrder(@PathVariable Integer id,
-                                                         @AuthenticationPrincipal UserPrincipal actor) {
-        return ResponseEntity.ok(orderService.getOrderById(id, actor));
+                                                         Authentication authentication) {
+        return ResponseEntity.ok(orderService.getOrderById(id, (UserPrincipal) authentication));
     }
 
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelOrder(@PathVariable Integer id,
-                                                            @AuthenticationPrincipal UserPrincipal actor) {
-        return ResponseEntity.ok(orderService.cancelOrder(id, actor));
+                                                            Authentication authentication) {
+        return ResponseEntity.ok(orderService.cancelOrder(id, (UserPrincipal) authentication));
     }
 }
