@@ -6,19 +6,19 @@ import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
 import { useAuth } from '../AuthContext';
 
 const CATEGORIES = [
-  { name: 'Smartphones',  icon: '📱', color: '#EEF2FF', count: '120+ products' },
-  { name: 'Laptops',      icon: '💻', color: '#F0FDF4', count: '80+ products' },
-  { name: 'Audio',        icon: '🎧', color: '#FFF7ED', count: '95+ products' },
-  { name: 'Smartwatches', icon: '⌚', color: '#FDF4FF', count: '60+ products' },
-  { name: 'Gaming',       icon: '🎮', color: '#FFF1F2', count: '70+ products' },
-  { name: 'Accessories',  icon: '🖱️', color: '#F0F9FF', count: '200+ products' },
+  { name: 'Smartphones',  icon: '📱', bg: 'linear-gradient(135deg, #EEF2FF, #C7D7FC)', count: '120+ products' },
+  { name: 'Laptops',      icon: '💻', bg: 'linear-gradient(135deg, #ECFDF5, #6EE7B7)', count: '80+ products' },
+  { name: 'Audio',        icon: '🎧', bg: 'linear-gradient(135deg, #FFF7ED, #FCA57A)', count: '95+ products' },
+  { name: 'Smartwatches', icon: '⌚', bg: 'linear-gradient(135deg, #F0FDF4, #86EFAC)', count: '60+ products' },
+  { name: 'Gaming',       icon: '🎮', bg: 'linear-gradient(135deg, #FDF4FF, #D8B4FE)', count: '70+ products' },
+  { name: 'Accessories',  icon: '🖱️', bg: 'linear-gradient(135deg, #EFF6FF, #93C5FD)', count: '200+ products' },
 ];
 
 const TRUST = [
-  { icon: '🔒', title: 'Secure Checkout',       desc: 'End-to-end encrypted payments for peace of mind.' },
-  { icon: '✅', title: 'Genuine Products',       desc: 'Every product sourced directly from verified suppliers.' },
-  { icon: '📦', title: 'Order Tracking',         desc: 'Real-time updates on every order from dispatch to door.' },
-  { icon: '🤖', title: 'AI-Powered Discovery',   desc: 'Find the right gadget faster with multimodal search.' },
+  { icon: '🔒', color: '#EFF6FF', title: 'Secure Checkout',       desc: 'End-to-end encrypted payments for peace of mind.' },
+  { icon: '✅', color: '#F0FDF4', title: 'Genuine Products',       desc: 'Every product sourced directly from verified suppliers.' },
+  { icon: '📦', color: '#FFF7ED', title: 'Order Tracking',         desc: 'Real-time updates on every order from dispatch to door.' },
+  { icon: '🤖', color: '#FDF4FF', title: 'AI-Powered Discovery',   desc: 'Find the right gadget faster with multimodal search.' },
 ];
 
 function Stars({ rating }) {
@@ -130,7 +130,10 @@ export default function Home() {
   return (
     <div>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{ borderBottom: '1.5px solid var(--border)' }}>
+      <section style={{
+        borderBottom: '1.5px solid var(--border)',
+        background: 'radial-gradient(ellipse 80% 50% at 0% 80%, rgba(183,243,107,.16) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 100% 20%, rgba(124,58,237,.08) 0%, transparent 55%), #fff',
+      }}>
         <div className="hero">
           <div className="hero-left">
             <div className="hero-eyebrow">
@@ -247,8 +250,13 @@ export default function Home() {
         </div>
         <div className="category-grid">
           {CATEGORIES.map(cat => (
-            <Link to="/catalog" key={cat.name} className="category-card">
-              <div className="category-card-icon" style={{ background: cat.color }}>
+            <Link
+              to="/catalog"
+              key={cat.name}
+              className="category-card"
+              style={{ background: cat.bg, border: '1px solid transparent' }}
+            >
+              <div className="category-card-icon" style={{ background: 'rgba(255,255,255,.7)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}>
                 {cat.icon}
               </div>
               <div className="category-card-name">{cat.name}</div>
@@ -329,7 +337,14 @@ export default function Home() {
         <div className="trust-strip-inner">
           {TRUST.map(t => (
             <div key={t.title}>
-              <div className="trust-item-icon">{t.icon}</div>
+              <div style={{
+                width: 52, height: 52,
+                background: t.color,
+                borderRadius: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.5rem',
+                margin: '0 auto .65rem',
+              }}>{t.icon}</div>
               <div className="trust-item-title">{t.title}</div>
               <div className="trust-item-desc">{t.desc}</div>
             </div>

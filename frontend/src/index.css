@@ -104,7 +104,7 @@ img { max-width: 100%; }
   color: var(--text);
   transition: border-color .15s, background .15s, box-shadow .15s;
 }
-.nav-search input:focus { outline: none; border-color: #C0C0C0; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
+.nav-search input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(183,243,107,.2); }
 .nav-search input::placeholder { color: var(--text-muted); }
 .nav-search-icon { position: absolute; left: .8rem; color: var(--text-muted); font-size: .85rem; pointer-events: none; }
 .nav-right { display: flex; align-items: center; gap: .25rem; margin-left: auto; flex-shrink: 0; }
@@ -796,8 +796,13 @@ label { font-size: .8125rem; font-weight: 500; color: var(--text-dim); }
   display: flex;
   align-items: center;
   gap: .5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 24px rgba(0,0,0,.07), 0 1px 4px rgba(0,0,0,.04);
   margin-bottom: 1rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+.hero-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(183,243,107,.22), 0 4px 24px rgba(0,0,0,.07);
 }
 .hero-search input {
   flex: 1;
@@ -880,7 +885,18 @@ label { font-size: .8125rem; font-weight: 500; color: var(--text-dim); }
 .home-section { max-width: 1180px; margin: 0 auto; padding: 4rem 2rem; }
 @media (max-width: 768px) { .home-section { padding: 2.5rem 1.5rem; } }
 .section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1.75rem; gap: 1rem; }
-.section-title { font-size: 1.4rem; font-weight: 800; color: var(--heading); letter-spacing: -.04em; }
+.section-title {
+  font-size: 1.4rem; font-weight: 800; color: var(--heading); letter-spacing: -.04em;
+  display: flex; align-items: center; gap: .65rem;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 1.2em;
+  background: var(--accent);
+  border-radius: 99px;
+  flex-shrink: 0;
+}
 .section-sub { color: var(--text-muted); font-size: .8125rem; margin-top: .2rem; }
 .section-link { color: var(--text-muted); font-size: .8125rem; font-weight: 600; white-space: nowrap; transition: color .15s; }
 .section-link:hover { color: var(--text); }
@@ -890,22 +906,22 @@ label { font-size: .8125rem; font-weight: 500; color: var(--text-dim); }
 @media (max-width: 1024px) { .category-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 600px) { .category-grid { grid-template-columns: repeat(2, 1fr); } }
 .category-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.25rem .875rem;
-  display: flex; flex-direction: column; align-items: center; gap: .65rem;
+  padding: 1.5rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: .75rem;
   text-align: center;
   cursor: pointer;
   transition: border-color .15s, box-shadow .2s, transform .2s;
   text-decoration: none;
 }
-.category-card:hover { border-color: #D4D4D8; box-shadow: var(--shadow); transform: translateY(-2px); }
+.category-card:hover { border-color: transparent; box-shadow: 0 8px 32px rgba(0,0,0,.12); transform: translateY(-3px); }
 .category-card-icon {
-  width: 52px; height: 52px;
-  border-radius: 13px;
+  width: 60px; height: 60px;
+  border-radius: 15px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 .category-card-name { font-size: .8125rem; font-weight: 600; color: var(--heading); }
 .category-card-count { font-size: .72rem; color: var(--text-muted); }
@@ -980,17 +996,18 @@ label { font-size: .8125rem; font-weight: 500; color: var(--text-dim); }
 .home-product-footer { padding: .625rem 1rem .875rem; }
 .btn-add-cart {
   width: 100%;
-  background: var(--text);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
   border: none;
   border-radius: var(--radius);
   padding: .575rem 1rem;
-  font-weight: 600;
+  font-weight: 700;
   font-size: .8125rem;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, transform .12s;
+  letter-spacing: -.1px;
 }
-.btn-add-cart:hover { background: #1a1a1a; }
+.btn-add-cart:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
 /* AI section */
 .ai-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
