@@ -7,7 +7,7 @@ import com.cartly.api.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,8 +21,8 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@Valid @RequestBody CreateReviewRequest req,
-                                                       @AuthenticationPrincipal UserPrincipal actor) {
-        return ResponseEntity.status(201).body(reviewService.createReview(req, actor));
+                                                       Authentication authentication) {
+        return ResponseEntity.status(201).body(reviewService.createReview(req, (UserPrincipal) authentication));
     }
 
     @GetMapping("/product/{id}")

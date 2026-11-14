@@ -36,12 +36,15 @@ public class PaymentService {
         payment.setOrder(order);
         payment.setMethod(req.method());
         payment.setAmount(req.amount());
-        payment.setStatus(Payment.PaymentStatus.SUCCESS);
         payment.setTransactionRef(req.transactionRef());
         payment.setPaidAt(OffsetDateTime.now());
+
+        boolean isCod = req.method() == Payment.PaymentMethod.COD;
+        payment.setStatus(isCod ? Payment.PaymentStatus.PENDING : Payment.PaymentStatus.SUCCESS);
+
         payment = paymentRepository.save(payment);
 
-        order.setStatus(Order.OrderStatus.PAID);
+        order.setStatus(isCod ? Order.OrderStatus.PLACED : Order.OrderStatus.PAID);
         orderRepository.save(order);
 
         return Map.of("paymentId", payment.getPaymentId(), "message", "Payment recorded");

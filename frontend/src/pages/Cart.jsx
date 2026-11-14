@@ -4,26 +4,43 @@ import { api } from '../api';
 import { useAuth } from '../AuthContext';
 
 const PAYMENT_METHODS = [
-  { value: 'UPI',        label: 'UPI',         icon: '⚡' },
-  { value: 'CARD',       label: 'Card',         icon: '💳' },
-  { value: 'NETBANKING', label: 'Net Banking',  icon: '🏦' },
+  { value: 'UPI',        label: 'UPI',              icon: '⚡' },
+  { value: 'CARD',       label: 'Card',             icon: '💳' },
+  { value: 'NETBANKING', label: 'Net Banking',       icon: '🏦' },
   { value: 'COD',        label: 'Cash on Delivery', icon: '💵' },
 ];
+
+const EMPTY_FORM = { line1: '', city: '', state: '', postalCode: '' };
 
 export default function Cart() {
   const { user }  = useAuth();
   const navigate  = useNavigate();
-  const [cart, setCart]       = useState([]);
-  const [addressId, setAddressId] = useState('');
-  const [method, setMethod]   = useState('UPI');
-  const [step, setStep]       = useState('cart');
-  const [orderId, setOrderId] = useState(null);
-  const [error, setError]     = useState('');
-  const [placing, setPlacing] = useState(false);
+  const [cart, setCart]           = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [showForm, setShowForm]   = useState(false);
+  const [form, setForm]           = useState(EMPTY_FORM);
+  const [savingAddr, setSavingAddr] = useState(false);
+  const [method, setMethod]       = useState('UPI');
+  const [step, setStep]           = useState('cart');
+  const [orderId, setOrderId]     = useState(null);
+  const [error, setError]         = useState('');
+  const [placing, setPlacing]     = useState(false);
 
   useEffect(() => {
     setCart(JSON.parse(localStorage.getItem('cartly_cart') || '[]'));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/addresses')
+      .then(data => {
+        setAddresses(data);
+        if (data.length > 0) setSelectedId(data[0].addressId);
+        else setShowForm(true);
+      })
+      .catch(() => setShowForm(true));
+  }, [user]);
 
   const updateQty = (product_id, qty) => {
     if (qty < 1) return removeItem(product_id);
@@ -42,20 +59,40 @@ export default function Cart() {
     });
   };
 
+  const saveAddress = async () => {
+    if (!form.line1 || !form.city || !form.state || !form.postalCode) {
+      setError('Please fill in all address fields');
+      return;
+    }
+    setSavingAddr(true);
+    setError('');
+    try {
+      const saved = await api.post('/addresses', form);
+      setAddresses(prev => [...prev, saved]);
+      setSelectedId(saved.addressId);
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingAddr(false);
+    }
+  };
+
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const placeOrder = async () => {
     setError('');
-    if (!addressId) { setError('Please enter your delivery address ID'); return; }
+    if (!selectedId) { setError('Please select or add a delivery address'); return; }
     setPlacing(true);
     try {
-      const { orderId: oid, order_id } = await api.post('/orders', {
-        address_id: parseInt(addressId),
-        items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+      const { orderId: id } = await api.post('/orders', {
+        addressId: selectedId,
+        items: cart.map(i => ({ productId: i.product_id, quantity: i.quantity })),
       });
-      const id = oid || order_id;
-      await api.post('/payments', { order_id: id, method, amount: subtotal });
+      await api.post('/payments', { orderId: id, method, amount: subtotal });
       localStorage.removeItem('cartly_cart');
+      window.dispatchEvent(new Event('storage'));
       setOrderId(id);
       setStep('done');
     } catch (e) {
@@ -145,18 +182,84 @@ export default function Cart() {
             </div>
           </div>
 
-          {/* Delivery */}
+          {/* Delivery Address */}
           <div className="card">
             <p className="card-title">Delivery Address</p>
-            <div className="address-section">
-              <input
-                type="number"
-                placeholder="Enter address ID"
-                value={addressId}
-                onChange={e => setAddressId(e.target.value)}
-              />
-              <p className="hint">Your saved address ID (shown in orders / profile)</p>
-            </div>
+
+            {addresses.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '.75rem' }}>
+                {addresses.map(addr => (
+                  <label
+                    key={addr.addressId}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '.6rem', cursor: 'pointer',
+                      padding: '.6rem .75rem', borderRadius: 8,
+                      border: `1.5px solid ${selectedId === addr.addressId ? 'var(--primary)' : 'var(--border)'}`,
+                      background: selectedId === addr.addressId ? 'var(--primary-light, #f0f4ff)' : 'transparent',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="address"
+                      value={addr.addressId}
+                      checked={selectedId === addr.addressId}
+                      onChange={() => { setSelectedId(addr.addressId); setShowForm(false); }}
+                      style={{ marginTop: 3, accentColor: 'var(--primary)' }}
+                    />
+                    <span style={{ fontSize: '.83rem', lineHeight: 1.4 }}>
+                      {addr.line1}, {addr.city}, {addr.state} – {addr.postalCode}
+                      {addr.isDefault && <span style={{ marginLeft: '.4rem', fontSize: '.72rem', color: 'var(--primary)', fontWeight: 600 }}>Default</span>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {!showForm ? (
+              <button
+                className="btn-secondary"
+                style={{ width: '100%', fontSize: '.8rem' }}
+                onClick={() => { setShowForm(true); setSelectedId(null); }}
+              >
+                + Add new address
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                <input
+                  placeholder="Street / Flat / Building *"
+                  value={form.line1}
+                  onChange={e => setForm(f => ({ ...f, line1: e.target.value }))}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
+                  <input
+                    placeholder="City *"
+                    value={form.city}
+                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                  />
+                  <input
+                    placeholder="State *"
+                    value={form.state}
+                    onChange={e => setForm(f => ({ ...f, state: e.target.value }))}
+                  />
+                </div>
+                <input
+                  placeholder="PIN Code *"
+                  value={form.postalCode}
+                  onChange={e => setForm(f => ({ ...f, postalCode: e.target.value }))}
+                  maxLength={6}
+                />
+                <div style={{ display: 'flex', gap: '.5rem', marginTop: '.25rem' }}>
+                  <button className="btn-primary" style={{ flex: 1, fontSize: '.8rem' }} onClick={saveAddress} disabled={savingAddr}>
+                    {savingAddr ? 'Saving…' : 'Save Address'}
+                  </button>
+                  {addresses.length > 0 && (
+                    <button className="btn-secondary" style={{ fontSize: '.8rem' }} onClick={() => { setShowForm(false); setSelectedId(addresses[0].addressId); }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Payment */}
@@ -176,7 +279,7 @@ export default function Cart() {
           </div>
 
           {error && <p className="form-error" style={{ padding: '0 .25rem' }}>{error}</p>}
-          <button className="btn-primary full-width" onClick={placeOrder} disabled={placing}>
+          <button className="btn-primary full-width" onClick={placeOrder} disabled={placing || showForm}>
             {placing ? 'Placing order…' : `Place Order · ₹${subtotal.toLocaleString('en-IN')}`}
           </button>
         </div>

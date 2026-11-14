@@ -34,11 +34,24 @@ function Stars({ rating }) {
 function ProductCard({ p }) {
   const navigate = useNavigate();
   const [wished, setWished] = useState(false);
+  const [added, setAdded] = useState(false);
   const id    = p.productId || p.product_id || p.id;
   const cat   = p.categoryName || p.category_name || '';
   const avg   = p.avgRating   || p.avg_rating   || 0;
   const cnt   = p.reviewCount || p.review_count || 0;
   const sup   = p.supplierName || p.supplier_name || p.brand || '';
+
+  const addToCart = (e) => {
+    e.stopPropagation();
+    const cart = JSON.parse(localStorage.getItem('cartly_cart') || '[]');
+    const existing = cart.find(i => i.product_id === id);
+    if (existing) { existing.quantity += 1; }
+    else { cart.push({ product_id: id, name: p.name, price: p.price, quantity: 1 }); }
+    localStorage.setItem('cartly_cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('storage'));
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <div className="home-product-card" onClick={() => navigate(`/products/${id}`)}>
@@ -68,17 +81,10 @@ function ProductCard({ p }) {
       <div className="home-product-footer">
         <button
           className="btn-add-cart"
-          onClick={e => {
-            e.stopPropagation();
-            const cart = JSON.parse(localStorage.getItem('cartly_cart') || '[]');
-            const existing = cart.find(i => i.product_id === id);
-            if (existing) { existing.quantity += 1; }
-            else { cart.push({ product_id: id, name: p.name, price: p.price, quantity: 1 }); }
-            localStorage.setItem('cartly_cart', JSON.stringify(cart));
-            window.dispatchEvent(new Event('storage'));
-          }}
+          style={added ? { background: 'var(--green)' } : {}}
+          onClick={addToCart}
         >
-          Add to Cart
+          {added ? '✓ Added!' : 'Add to Cart'}
         </button>
       </div>
     </div>
@@ -203,36 +209,32 @@ export default function Home() {
           {/* Right: gadget collage */}
           <div className="hero-right">
             {[
-              { emoji: '🎧', bg: '#1a1a2e' },
-              { emoji: '📱', bg: '#0a192f' },
-              { emoji: '⌚', bg: '#e8f0fe' },
-              { emoji: '💻', bg: '#f5f5f7' },
+              { emoji: '🎧', bg: '#1a1a2e', label: 'Audio',     dark: true },
+              { emoji: '📱', bg: '#0a192f', label: 'Mobile',    dark: true },
+              { emoji: '⌚', bg: '#e8f0fe', label: 'Wearables', dark: false },
+              { emoji: '💻', bg: '#f5f5f7', label: 'Laptops',   dark: false },
             ].map((tile, i) => (
               <div
                 key={i}
                 className="hero-gadget-tile"
-                style={{ background: tile.bg }}
+                style={{ background: tile.bg, flexDirection: 'column', gap: '.45rem' }}
               >
-                {tile.emoji}
+                <span style={{ fontSize: i === 0 ? '4rem' : '3rem' }}>{tile.emoji}</span>
+                <span style={{
+                  fontSize: '.7rem',
+                  fontWeight: 700,
+                  letterSpacing: '.06em',
+                  textTransform: 'uppercase',
+                  color: tile.dark ? 'rgba(255,255,255,.55)' : 'var(--text-dim)',
+                  position: 'relative',
+                  zIndex: 1,
+                }}>{tile.label}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Customer Quick Access ─────────────────────────────────────────── */}
-      {user && user.role !== 'admin' && (
-        <section style={{ background: 'var(--accent)', borderBottom: '1.5px solid var(--border)' }}>
-          <div style={{ maxWidth: 1180, margin: '0 auto', padding: '.9rem 2rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: '.875rem', color: 'var(--accent-fg)', flex: 1 }}>
-              👋 Hey {user.name?.split(' ')[0]}, ready to shop?
-            </span>
-            <Link to="/catalog" style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>🛍️ Browse Shop</Link>
-            <Link to="/cart"    style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>🛒 My Cart</Link>
-            <Link to="/orders"  style={{ fontSize: '.8125rem', fontWeight: 600, color: 'var(--accent-fg)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>📦 My Orders</Link>
-          </div>
-        </section>
-      )}
 
       {/* ── Categories ───────────────────────────────────────────────────── */}
       <section className="home-section">
