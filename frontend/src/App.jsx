@@ -9,6 +9,8 @@ import Cart          from './pages/Cart';
 import Orders        from './pages/Orders';
 import ManageProduct from './pages/ManageProduct';
 import Home          from './pages/Home';
+import Wishlist      from './pages/Wishlist';
+import AIChatWidget  from './components/AIChatWidget';
 
 function RequireAuth({ children, adminOnly }) {
   const { user } = useAuth();
@@ -33,9 +35,11 @@ function AppRoutes() {
           <Route path="/dashboard"         element={<RequireAuth adminOnly><Dashboard /></RequireAuth>} />
           <Route path="/cart"              element={<RequireAuth><Cart /></RequireAuth>} />
           <Route path="/orders"            element={<RequireAuth><Orders /></RequireAuth>} />
+          <Route path="/wishlist"          element={<Wishlist />} />
           <Route path="*"                  element={<Navigate to="/" />} />
         </Routes>
       </main>
+      {user?.role !== 'admin' && <AIChatWidget />}
     </>
   );
 }

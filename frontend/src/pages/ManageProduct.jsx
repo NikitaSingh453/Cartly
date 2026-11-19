@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { geminiGenerate } from '../utils/gemini';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 export default function ManageProduct() {
   const { id } = useParams(); // if present, edit mode
@@ -13,6 +15,24 @@ export default function ManageProduct() {
   });
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aiDescLoading, setAiDescLoading] = useState(false);
+
+  const generateDescription = async () => {
+    if (!form.name.trim()) { setMsg('Enter a product name first.'); return; }
+    setAiDescLoading(true);
+    setMsg('');
+    try {
+      const catName = categories.find(c => String(c.categoryId) === String(form.categoryId))?.name || '';
+      const desc = await geminiGenerate(
+        `Write a compelling 2-3 sentence product description for "${form.name}"${catName ? ` (${catName})` : ''}. Focus on key features and benefits. Be specific and factual. No generic marketing fluff.`
+      );
+      setForm(f => ({ ...f, description: desc }));
+    } catch (e) {
+      setMsg('AI failed: ' + e.message);
+    } finally {
+      setAiDescLoading(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([api.get('/categories'), api.get('/suppliers')])
@@ -45,6 +65,7 @@ export default function ManageProduct() {
         await api.post('/products', { ...form, price: parseFloat(form.price), categoryId: parseInt(form.categoryId), supplierId: parseInt(form.supplierId), quantityOnHand: parseInt(form.quantityOnHand), reorderLevel: parseInt(form.reorderLevel) });
         setMsg('Product created!');
         setForm({ sku: '', name: '', description: '', price: '', categoryId: '', supplierId: '', quantityOnHand: '', reorderLevel: '10', isActive: true });
+        setTimeout(() => navigate('/catalog'), 800);
       }
     } catch (err) {
       setMsg(err.message);
@@ -96,6 +117,9 @@ export default function ManageProduct() {
         </div>
         <label>Description
           <textarea rows={3} value={form.description} onChange={set('description')} placeholder="Product description…" />
+          <button type="button" className="ai-gen-btn" onClick={generateDescription} disabled={aiDescLoading}>
+            {aiDescLoading ? <><Loader2 size={13} className="ai-spin" /> Generating…</> : <><Sparkles size={13} /> Write with AI</>}
+          </button>
         </label>
         {msg && <p className={msg.includes('!') ? 'form-success' : 'form-error'}>{msg}</p>}
         <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving…' : id ? 'Update Product' : 'Create Product'}</button>
