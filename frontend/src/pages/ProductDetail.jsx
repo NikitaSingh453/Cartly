@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
 import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
-import { geminiGenerate } from '../utils/gemini';
+import { geminiGenerate, aiCacheGet, aiCacheSet } from '../utils/gemini';
 import { Sparkles, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
@@ -55,12 +55,15 @@ export default function ProductDetail() {
     const revList = product?.reviews || [];
     if (!product || revList.length < 3 || aiSummary) return;
     const timer = setTimeout(() => {
+      const pid = product.productId || product.product_id;
+      const cached = aiCacheGet(`review_sum_${pid}`);
+      if (cached) { setAiSummary(cached); return; }
       setAiSumLoading(true);
       const reviewText = revList.slice(0, 15).map(r => `${r.rating}/5 stars: "${r.comment || r.title || ''}"`).join('\n');
       geminiGenerate(
         `Summarize these customer reviews for "${product.name}" in 2 sentences. Mention top pros and any cons. Be specific.\n\n${reviewText}`,
         { maxOutputTokens: 180 }
-      ).then(setAiSummary).catch(() => {}).finally(() => setAiSumLoading(false));
+      ).then(r => { setAiSummary(r); aiCacheSet(`review_sum_${pid}`, r); }).catch(() => {}).finally(() => setAiSumLoading(false));
     }, 500);
     return () => clearTimeout(timer);
   }, [product?.productId, (product?.reviews || []).length]);
@@ -69,11 +72,13 @@ export default function ProductDetail() {
   useEffect(() => {
     if (!product) return;
     const catName = product.categoryName || product.category_name || '';
+    const pid = product.productId || product.product_id;
     const timer = setTimeout(() => {
+      const cached = aiCacheGet(`recs_${pid}`);
+      if (cached) { setAiRecs(cached); return; }
       setAiRecsLoading(true);
       api.get('/products?limit=20').then(async (d) => {
         const all = d.products || [];
-        const pid = product.productId || product.product_id;
         const others = all.filter(p => (p.productId || p.product_id) !== pid);
         const catalog = others.map(p => `ID:${p.productId || p.product_id} ${p.name} ₹${p.price}`).join('\n');
         const reply = await geminiGenerate(
@@ -85,6 +90,7 @@ export default function ProductDetail() {
           const ids = JSON.parse(match[0]);
           const recs = all.filter(p => ids.includes(p.productId || p.product_id)).slice(0, 3);
           setAiRecs(recs);
+          aiCacheSet(`recs_${pid}`, recs);
         }
       }).catch(() => {}).finally(() => setAiRecsLoading(false));
     }, 3000);

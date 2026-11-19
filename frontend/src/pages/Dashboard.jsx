@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../api';
-import { geminiGenerate, geminiChat } from '../utils/gemini';
+import { geminiGenerate, geminiChat, aiCacheGet, aiCacheSet } from '../utils/gemini';
 import { Sparkles, Send, Loader2, Bot } from 'lucide-react';
 
 export default function Dashboard() {
@@ -30,35 +30,44 @@ export default function Dashboard() {
 
     // 1. Low-stock AI insights (immediate)
     setAiInsightsLoading(true);
-    api.get('/products?limit=100').then(async d => {
-      const products = d.products || [];
-      const low = products.filter(p => (p.quantityOnHand ?? 0) <= (p.reorderLevel ?? 10));
-      if (low.length === 0) { setAiInsights('All products are adequately stocked. No restocking needed right now.'); return; }
-      const list = low.map(p => `• ${p.name}: ${p.quantityOnHand} units (reorder at ${p.reorderLevel})`).join('\n');
-      const insight = await geminiGenerate(
-        `You are an inventory analyst. These products are running low:\n${list}\n\nProvide 3 concise bullet-point recommendations with urgency levels (🔴 Urgent / 🟡 Soon / 🟢 Watch). Be specific.`
-      );
-      setAiInsights(insight);
-    }).catch(() => setAiInsights('Could not load AI insights.')).finally(() => setAiInsightsLoading(false));
+    const cachedInsights = aiCacheGet('dash_insights');
+    if (cachedInsights) { setAiInsights(cachedInsights); setAiInsightsLoading(false); }
+    else {
+      api.get('/products?limit=100').then(async d => {
+        const products = d.products || [];
+        const low = products.filter(p => (p.quantityOnHand ?? 0) <= (p.reorderLevel ?? 10));
+        if (low.length === 0) { setAiInsights('All products are adequately stocked. No restocking needed right now.'); return; }
+        const list = low.map(p => `• ${p.name}: ${p.quantityOnHand} units (reorder at ${p.reorderLevel})`).join('\n');
+        const insight = await geminiGenerate(
+          `You are an inventory analyst. These products are running low:\n${list}\n\nProvide 3 concise bullet-point recommendations with urgency levels (🔴 Urgent / 🟡 Soon / 🟢 Watch). Be specific.`
+        );
+        setAiInsights(insight);
+        aiCacheSet('dash_insights', insight);
+      }).catch(() => setAiInsights('Could not load AI insights.')).finally(() => setAiInsightsLoading(false));
+    }
 
     // 2. Review sentiment — delayed 4s to avoid rate-limit collision
     if (data.topSellers?.length > 0) {
       setSentimentLoading(true);
-      setTimeout(async () => {
-        try {
-          const topIds = data.topSellers.slice(0, 3).map(p => p.productId || p.product_id);
-          const arrays = await Promise.all(topIds.map(id => api.get(`/products/${id}`).then(p => p.reviews || []).catch(() => [])));
-          const all = arrays.flat().filter(r => r.comment || r.title);
-          if (all.length === 0) { setSentimentLoading(false); return; }
-          const reviewText = all.slice(0, 20).map(r => `${r.rating}/5: "${r.comment || r.title}"`).join('\n');
-          const reply = await geminiGenerate(
-            `Classify these reviews as positive/neutral/negative and return ONLY valid JSON: {"positive": N, "neutral": N, "negative": N, "summary": "one sentence insight"}.\n\nReviews:\n${reviewText}`,
-            { temperature: 0.1, maxOutputTokens: 80 }
-          );
-          const m = reply.match(/\{[\s\S]*\}/);
-          if (m) setSentiment(JSON.parse(m[0]));
-        } catch {} finally { setSentimentLoading(false); }
-      }, 4000);
+      const cachedSentiment = aiCacheGet('dash_sentiment');
+      if (cachedSentiment) { setSentiment(cachedSentiment); setSentimentLoading(false); }
+      else {
+        setTimeout(async () => {
+          try {
+            const topIds = data.topSellers.slice(0, 3).map(p => p.productId || p.product_id);
+            const arrays = await Promise.all(topIds.map(id => api.get(`/products/${id}`).then(p => p.reviews || []).catch(() => [])));
+            const all = arrays.flat().filter(r => r.comment || r.title);
+            if (all.length === 0) { setSentimentLoading(false); return; }
+            const reviewText = all.slice(0, 20).map(r => `${r.rating}/5: "${r.comment || r.title}"`).join('\n');
+            const reply = await geminiGenerate(
+              `Classify these reviews as positive/neutral/negative and return ONLY valid JSON: {"positive": N, "neutral": N, "negative": N, "summary": "one sentence insight"}.\n\nReviews:\n${reviewText}`,
+              { temperature: 0.1, maxOutputTokens: 80 }
+            );
+            const m = reply.match(/\{[\s\S]*\}/);
+            if (m) { const parsed = JSON.parse(m[0]); setSentiment(parsed); aiCacheSet('dash_sentiment', parsed); }
+          } catch {} finally { setSentimentLoading(false); }
+        }, 4000);
+      }
     }
   }, [data?.productCount]);
 

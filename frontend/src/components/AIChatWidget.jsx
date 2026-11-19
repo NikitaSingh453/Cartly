@@ -52,7 +52,8 @@ export default function AIChatWidget() {
       const reply = await geminiChat(history, buildSystemInstruction(products, cart));
       setMessages((m) => [...m, { role: 'model', text: reply }]);
     } catch (e) {
-      setMessages((m) => [...m, { role: 'model', text: `Sorry, I couldn't connect. (${e.message})` }]);
+      const isHighDemand = e.message?.toLowerCase().includes('high demand') || e.message?.includes('503');
+      setMessages((m) => [...m, { role: 'model', text: isHighDemand ? 'Gemini is busy right now — please try again in a few seconds.' : `Sorry, I couldn't connect. (${e.message})` }]);
     } finally {
       setLoading(false);
     }

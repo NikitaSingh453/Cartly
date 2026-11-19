@@ -6,7 +6,7 @@ function apiKey() {
   return k;
 }
 
-async function callGemini(contents, systemInstruction, config = {}, retries = 1) {
+async function callGemini(contents, systemInstruction, config = {}, retries = 3) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey()}`;
   const body = {
     contents,
@@ -23,8 +23,9 @@ async function callGemini(contents, systemInstruction, config = {}, retries = 1)
     const msg = data.error?.message || `Gemini error ${res.status}`;
     const isQuota = msg.includes('quota') || msg.includes('Quota') || msg.includes('rate') || msg.includes('429');
     if (isQuota) throw new Error('Rate limit reached (free tier: 5 req/min). Please wait a moment and try again.');
-    if (retries > 0 && res.status === 503) {
-      await new Promise(r => setTimeout(r, 2000));
+    if (retries > 0 && (res.status === 503 || res.status === 429)) {
+      const delay = (4 - retries) * 2000; // 2s, 4s, 6s
+      await new Promise(r => setTimeout(r, delay));
       return callGemini(contents, systemInstruction, config, retries - 1);
     }
     throw new Error(msg);
@@ -54,4 +55,20 @@ export function parseGeminiJSON(text) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON in response');
   return JSON.parse(match[0]);
+}
+
+const AI_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export function aiCacheGet(key) {
+  try {
+    const entry = JSON.parse(localStorage.getItem(`cartly_ai_${key}`) || 'null');
+    if (!entry || Date.now() - entry.ts > AI_CACHE_TTL) return null;
+    return entry.value;
+  } catch { return null; }
+}
+
+export function aiCacheSet(key, value) {
+  try {
+    localStorage.setItem(`cartly_ai_${key}`, JSON.stringify({ value, ts: Date.now() }));
+  } catch {}
 }
