@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ArrowRight, Mail, Zap, Clock3, ShoppingCart, Globe, Link2, ExternalLink, ArrowUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight, Mail, Zap, ShoppingCart, Globe, Link2, ExternalLink, ArrowUp } from "lucide-react";
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
 import Icon from "../components/Icon";
@@ -352,31 +352,6 @@ function Trending({ products }) {
   );
 }
 
-// ── Recently Viewed ───────────────────────────────────────────────────────────
-function RecentlyViewed({ products }) {
-  const navigate = useNavigate();
-  if (products.length === 0) return null;
-  return (
-    <section>
-      <div className="section-head">
-        <h2>Recently Viewed <Clock3 size={16} className="clock" /></h2>
-        <Link to="/catalog" className="link-sm">View All <ArrowRight size={11} /></Link>
-      </div>
-      <div className="recent">
-        {products.map((p, n) => (
-          <div key={n} className="recent-item" style={{ cursor: 'pointer' }}
-            onClick={() => navigate(`/products/${p.product_id}`)}>
-            <div className="svg-thumb" style={{ position: 'relative', width: '100%', height: '100%' }}>
-              {getProductSVG(p.name, p.category_name, 60)}
-            </div>
-          </div>
-        ))}
-        <button className="recent-more" aria-label="More"><ChevronRight size={16} /></button>
-      </div>
-    </section>
-  );
-}
-
 // ── Newsletter ────────────────────────────────────────────────────────────────
 function Newsletter() {
   const [email, setEmail] = useState("");
@@ -466,19 +441,11 @@ function Footer() {
 // ── Home page ─────────────────────────────────────────────────────────────────
 export default function Home() {
   const [products, setProducts] = useState([]);
-  const [recentProducts, setRecentProducts] = useState([]);
 
   useEffect(() => {
     api.get("/products?limit=12&page=1")
       .then((data) => setProducts(data.products || []))
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    setRecentProducts(JSON.parse(localStorage.getItem('cartly_recently_viewed') || '[]').slice(0, 5));
-    const onStorage = () => setRecentProducts(JSON.parse(localStorage.getItem('cartly_recently_viewed') || '[]').slice(0, 5));
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const flashProducts    = products.slice(0, 4).map((p, i) => toCardShape(p, i));
@@ -494,7 +461,6 @@ export default function Home() {
           <FlashSale products={flashProducts} />
           <Banners />
           <Trending products={trendingProducts} />
-          <RecentlyViewed products={recentProducts} />
         </main>
         <div className="full">
           <Newsletter />

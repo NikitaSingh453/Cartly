@@ -2,8 +2,26 @@ import { Heart, Star, ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { getProductSVG } from "./ProductSVG";
+import { getProductImageUrl } from "../utils/categoryHelpers";
 
 const formatINR = (n) => "₹" + Number(n).toLocaleString("en-IN");
+
+function ProductImage({ name, cat, imgSrc }) {
+  const [errored, setErrored] = useState(false);
+  const src = imgSrc || getProductImageUrl(name);
+
+  if (!src || errored) {
+    return <div className="svg-thumb">{getProductSVG(name, cat, 110)}</div>;
+  }
+  return (
+    <img
+      className="thumb real-img"
+      src={src}
+      alt={name}
+      onError={() => setErrored(true)}
+    />
+  );
+}
 
 export default function ProductCard({ p, onAdd, gridClass = "" }) {
   const navigate = useNavigate();
@@ -66,13 +84,7 @@ export default function ProductCard({ p, onAdd, gridClass = "" }) {
         >
           <Heart size={14} fill={wished ? "#ff5c8a" : "none"} color={wished ? "#ff5c8a" : "currentColor"} />
         </button>
-        {imgSrc ? (
-          <img className="thumb" src={imgSrc} alt={name} />
-        ) : (
-          <div className="svg-thumb">
-            {getProductSVG(name, cat, 110)}
-          </div>
-        )}
+        <ProductImage name={name} cat={cat} imgSrc={imgSrc} />
       </div>
       <h5>{name}</h5>
       {(avg > 0 || reviews) && (
@@ -94,3 +106,4 @@ export default function ProductCard({ p, onAdd, gridClass = "" }) {
     </article>
   );
 }
+

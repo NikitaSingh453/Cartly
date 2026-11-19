@@ -1651,3 +1651,20 @@ label { font-size: .8125rem; font-weight: 500; color: var(--text-dim); }
   color: var(--primary);
   font-weight: 600;
 }
+
+/* ── Real product images ─────────────────────────────────────── */
+.product-card-img .real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+.detail-real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
+import { categoryIcon, categoryGradient, getProductImageUrl } from '../utils/categoryHelpers';
 import { geminiGenerate, aiCacheGet, aiCacheSet } from '../utils/gemini';
 import { Sparkles, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -129,12 +129,7 @@ export default function ProductDetail() {
 
       <div className="detail-layout">
         <div className="detail-img-wrap">
-          <div className="detail-img-placeholder" style={{ background: categoryGradient(cat) }}>
-            <span style={{ filter: 'drop-shadow(0 6px 20px rgba(0,0,0,.2))', position: 'relative', zIndex: 1 }}>
-              {categoryIcon(cat)}
-            </span>
-          </div>
-          {!inStock && <div className="oos-overlay">Out of Stock</div>}
+          <DetailImage name={product.name} cat={cat} inStock={inStock} />
         </div>
 
         <div className="detail-info">
@@ -245,6 +240,33 @@ export default function ProductDetail() {
         )}
       </div>
     </div>
+  );
+}
+
+function DetailImage({ name, cat, inStock }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <>
+        <div className="detail-img-placeholder" style={{ background: categoryGradient(cat) }}>
+          <span style={{ filter: 'drop-shadow(0 6px 20px rgba(0,0,0,.2))', position: 'relative', zIndex: 1 }}>
+            {categoryIcon(cat)}
+          </span>
+        </div>
+        {!inStock && <div className="oos-overlay">Out of Stock</div>}
+      </>
+    );
+  }
+  return (
+    <>
+      <img
+        src={getProductImageUrl(name)}
+        alt={name}
+        className="detail-real-img"
+        onError={() => setErrored(true)}
+      />
+      {!inStock && <div className="oos-overlay">Out of Stock</div>}
+    </>
   );
 }
 
