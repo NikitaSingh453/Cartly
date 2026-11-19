@@ -64,7 +64,8 @@ export function getProductImageUrl(name) {
         || n.includes('boat') || n.includes('rockerz') || n.includes('jbl')
         || n.includes('bose') || n.includes('sennheiser'))                               key = 'headphones';
   else if (n.includes('webcam') || n.includes('c920'))                                  key = 'webcam';
-  else if (n.includes('iphone') || (n.includes('apple') && !n.includes('watch') && !n.includes('ipad') && !n.includes('airpods'))) key = 'iphone';
+  else if (n.includes('macbook'))                                                        key = 'macbook laptop';
+  else if (n.includes('iphone') || (n.includes('apple') && !n.includes('watch') && !n.includes('ipad'))) key = 'iphone';
   else if (n.includes('samsung') && !n.includes('bud'))                                 key = 'samsung phone';
   else if (n.includes('oneplus'))                                                        key = 'oneplus phone';
   else if (n.includes('xiaomi') && !n.includes('bud'))                                  key = 'xiaomi phone';
@@ -72,7 +73,6 @@ export function getProductImageUrl(name) {
   else if (n.includes('smartphone') || n.includes('phone')
         || n.includes('oppo') || n.includes('vivo')
         || n.includes('realme') || n.includes('motorola') || n.includes('nokia'))        key = 'smartphone';
-  else if (n.includes('macbook'))                                                        key = 'macbook laptop';
   else if (n.includes('rog') || n.includes('gaming laptop') || n.includes('gaming'))    key = 'gaming laptop';
   else if (n.includes('laptop') || n.includes('zenbook') || n.includes('thinkpad') || n.includes('notebook')) key = 'laptop computer';
   else if (n.includes('ipad'))                                                           key = 'ipad tablet';
