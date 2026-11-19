@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import StripeCheckout from '../components/StripeCheckout';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 const PAYMENT_METHODS = [
   { value: 'UPI',        label: 'UPI',              icon: '⚡' },
@@ -24,6 +29,7 @@ export default function Cart() {
   const [method, setMethod]       = useState('UPI');
   const [step, setStep]           = useState('cart');
   const [orderId, setOrderId]     = useState(null);
+  const [stripeClientSecret, setStripeClientSecret] = useState('');
   const [error, setError]         = useState('');
   const [placing, setPlacing]     = useState(false);
 
@@ -90,16 +96,29 @@ export default function Cart() {
         addressId: selectedId,
         items: cart.map(i => ({ productId: i.product_id, quantity: i.quantity })),
       });
-      await api.post('/payments', { orderId: id, method, amount: subtotal });
-      localStorage.removeItem('cartly_cart');
-      window.dispatchEvent(new Event('storage'));
-      setOrderId(id);
-      setStep('done');
+      if (method === 'CARD') {
+        const { clientSecret } = await api.post('/payments/create-intent', { amount: subtotal });
+        setOrderId(id);
+        setStripeClientSecret(clientSecret);
+        setStep('stripe');
+      } else {
+        await api.post('/payments', { orderId: id, method, amount: subtotal });
+        localStorage.removeItem('cartly_cart');
+        window.dispatchEvent(new Event('storage'));
+        setOrderId(id);
+        setStep('done');
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setPlacing(false);
     }
+  };
+
+  const onStripeSuccess = () => {
+    localStorage.removeItem('cartly_cart');
+    window.dispatchEvent(new Event('storage'));
+    setStep('done');
   };
 
   if (!user) return (
@@ -109,6 +128,28 @@ export default function Cart() {
         <h3>Sign in to view your cart</h3>
         <p>You need to be logged in to access your cart and place orders.</p>
         <Link to="/login"><button className="btn-primary">Sign In</button></Link>
+      </div>
+    </div>
+  );
+
+  if (step === 'stripe') return (
+    <div className="page center-page">
+      <div className="success-card" style={{ maxWidth: 480 }}>
+        <h2 style={{ marginBottom: '1.25rem' }}>Complete Payment</h2>
+        <div className="summary-row" style={{ marginBottom: '1rem' }}>
+          <span>Order #{orderId}</span>
+          <span style={{ fontWeight: 700 }}>₹{subtotal.toLocaleString('en-IN')}</span>
+        </div>
+        <Elements stripe={stripePromise}>
+          <StripeCheckout
+            clientSecret={stripeClientSecret}
+            orderId={orderId}
+            amount={subtotal}
+            onSuccess={onStripeSuccess}
+            onError={(msg) => setError(msg)}
+          />
+        </Elements>
+        {error && <p className="form-error" style={{ marginTop: '.75rem' }}>{error}</p>}
       </div>
     </div>
   );
