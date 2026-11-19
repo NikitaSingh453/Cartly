@@ -10,6 +10,7 @@ export default function Orders() {
   const [detail, setDetail]     = useState(null);
   const [loading, setLoading]   = useState(true);
   const [cancelMsg, setCancelMsg] = useState('');
+  const [cancelSuccess, setCancelSuccess] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function Orders() {
     setSelected(id);
     setDetail(null);
     setCancelMsg('');
+    setCancelSuccess(false);
     try {
       const d = await api.get(`/orders/${id}`);
       setDetail(d);
@@ -35,6 +37,7 @@ export default function Orders() {
     try {
       await api.patch(`/orders/${id}/cancel`);
       setCancelMsg('Order cancelled successfully.');
+      setCancelSuccess(true);
       const [updated, d] = await Promise.all([
         api.get('/orders'),
         api.get(`/orders/${id}`),
@@ -192,7 +195,7 @@ export default function Orders() {
               )}
 
               {cancelMsg && (
-                <p className={cancelMsg.includes('success') ? 'form-success' : 'form-error'} style={{ marginTop: '.5rem' }}>
+                <p className={cancelSuccess ? 'form-success' : 'form-error'} style={{ marginTop: '.5rem' }}>
                   {cancelMsg}
                 </p>
               )}

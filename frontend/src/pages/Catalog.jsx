@@ -1,17 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { api } from '../api';
-import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
+import ProductCard from '../components/ProductCard';
 
 export default function Catalog() {
-  const [searchParams] = useSearchParams();
-  const [products, setProducts]     = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [total, setTotal]           = useState(0);
-  const [loading, setLoading]       = useState(false);
-  const [filters, setFilters]       = useState({
+  const [searchParams]               = useSearchParams();
+  const navigate                     = useNavigate();
+  const [products, setProducts]      = useState([]);
+  const [categories, setCategories]  = useState([]);
+  const [total, setTotal]            = useState(0);
+  const [loading, setLoading]        = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters]        = useState({
     search:    searchParams.get('search') || '',
-    category:  '',
+    category:  searchParams.get('category') || '',
     min_price: '',
     max_price: '',
     page:      1,
@@ -21,15 +24,15 @@ export default function Catalog() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (filters.search)    params.set('search', filters.search);
-      if (filters.category)  params.set('category', filters.category);
+      if (filters.search)    params.set('search',    filters.search);
+      if (filters.category)  params.set('category',  filters.category);
       if (filters.min_price) params.set('min_price', filters.min_price);
       if (filters.max_price) params.set('max_price', filters.max_price);
-      params.set('page', filters.page);
+      params.set('page',  filters.page);
       params.set('limit', 12);
       const data = await api.get(`/products?${params}`);
-      setProducts(data.products);
-      setTotal(data.total);
+      setProducts(data.products || []);
+      setTotal(data.total || 0);
     } catch (e) {
       console.error(e);
     } finally {
@@ -40,164 +43,150 @@ export default function Catalog() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
   useEffect(() => { api.get('/categories').then(c => setCategories(c)).catch(() => {}); }, []);
 
-  const set = (k) => (e) => setFilters(f => ({ ...f, [k]: e.target.value, page: 1 }));
-  const totalPages = Math.ceil(total / 12);
+  const set  = (k) => (e) => setFilters(f => ({ ...f, [k]: e.target.value, page: 1 }));
+  const setV = (k, v) => setFilters(f => ({ ...f, [k]: v, page: 1 }));
+  const clearAll = () => setFilters({ search: '', category: '', min_price: '', max_price: '', page: 1 });
+  const totalPages  = Math.ceil(total / 12);
+  const hasFilters  = filters.search || filters.category || filters.min_price || filters.max_price;
+  const parentCats  = categories.filter(c => !c.parentId);
 
   return (
-    <div className="page">
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="page-title" style={{ marginBottom: '.25rem' }}>Shop</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '.875rem' }}>
-          Discover {total > 0 ? total : ''} products across all categories
-        </p>
+    <div className="page catalog-page">
+
+      {/* ── Page header ── */}
+      <div className="catalog-header">
+        <div>
+          <h1 className="catalog-title">Shop</h1>
+          <p className="catalog-sub">
+            {total > 0 ? <><strong style={{ color: 'var(--accent)' }}>{total}</strong> products</> : 'Explore our catalog'}
+            {filters.search && <> for "<em>{filters.search}</em>"</>}
+          </p>
+        </div>
+        <button className="catalog-filter-toggle" onClick={() => setShowFilters(v => !v)}>
+          <SlidersHorizontal size={15} />
+          Filters
+          {hasFilters && <span className="filter-dot" />}
+        </button>
       </div>
 
-      <div className="filter-bar">
-        <div className="filter-search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <span style={{ position: 'absolute', left: '.75rem', color: 'var(--text-muted)', fontSize: '.875rem', pointerEvents: 'none' }}>🔍</span>
+      {/* ── Search bar ── */}
+      <div className="catalog-search-wrap">
+        <label className="catalog-search">
+          <Search size={16} />
           <input
-            style={{ paddingLeft: '2.2rem' }}
-            placeholder="Search gadgets, brands…"
+            placeholder="Search products, brands, categories…"
             value={filters.search}
             onChange={set('search')}
           />
-        </div>
-        <select value={filters.category} onChange={set('category')} style={{ width: '180px' }}>
-          <option value="">All Categories</option>
-          {categories.filter(c => !c.parentId).map(c => (
-            <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
-          ))}
-          {categories.filter(c => c.parentId).map(c => (
-            <option key={c.categoryId} value={c.categoryId}>  {c.name}</option>
-          ))}
-        </select>
-        <input className="filter-price" placeholder="Min ₹" type="number" value={filters.min_price} onChange={set('min_price')} />
-        <input className="filter-price" placeholder="Max ₹" type="number" value={filters.max_price} onChange={set('max_price')} />
+          {filters.search && (
+            <button onClick={() => setV('search', '')} style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
+              <X size={14} />
+            </button>
+          )}
+        </label>
       </div>
 
+      {/* ── Category chips ── */}
+      {parentCats.length > 0 && (
+        <div className="catalog-chips">
+          <button
+            className={`catalog-chip${!filters.category ? ' active' : ''}`}
+            onClick={() => setV('category', '')}
+          >All</button>
+          {parentCats.map(c => (
+            <button
+              key={c.categoryId}
+              className={`catalog-chip${filters.category === String(c.categoryId) ? ' active' : ''}`}
+              onClick={() => setV('category', filters.category === String(c.categoryId) ? '' : String(c.categoryId))}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Expandable filter panel ── */}
+      {showFilters && (
+        <div className="catalog-filter-panel">
+          <div className="filter-group">
+            <label className="filter-label">Min Price (₹)</label>
+            <input type="number" placeholder="0" value={filters.min_price} onChange={set('min_price')} className="filter-input" />
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Max Price (₹)</label>
+            <input type="number" placeholder="Any" value={filters.max_price} onChange={set('max_price')} className="filter-input" />
+          </div>
+          {hasFilters && (
+            <button className="filter-clear" onClick={clearAll}>
+              <X size={12} /> Clear all
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Product grid ── */}
       {loading ? (
-        <div className="product-grid">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="skeleton-card">
-              <div className="skeleton skeleton-img" />
-              <div className="skeleton-body">
-                <div className="skeleton skeleton-line short" />
-                <div className="skeleton skeleton-line long" />
-                <div className="skeleton skeleton-line mid" />
-                <div className="skeleton skeleton-line short" />
+        <div className="grid-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="product-card catalog-skeleton">
+              <div className="product-card-img" style={{ background: 'var(--surface2)' }} />
+              <div style={{ padding: '0 .75rem .75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="skel-line" style={{ width: '80%' }} />
+                <div className="skel-line" style={{ width: '50%' }} />
+                <div className="skel-line" style={{ width: '65%' }} />
               </div>
             </div>
           ))}
         </div>
+      ) : products.length === 0 ? (
+        <div className="catalog-empty">
+          <span style={{ fontSize: 48 }}>🔍</span>
+          <h3>No products found</h3>
+          <p>Try a different search or clear your filters.</p>
+          <button className="btn" onClick={clearAll}>Clear filters</button>
+        </div>
       ) : (
-        <>
-          <p className="result-count">
-            {total} product{total !== 1 ? 's' : ''} found
-            {filters.search && <> for "<strong>{filters.search}</strong>"</>}
-          </p>
+        <div className="grid-4">
+          {products.map(p => (
+            <ProductCard key={p.productId || p.product_id} p={p} />
+          ))}
+        </div>
+      )}
 
-          {products.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">🔍</div>
-              <h3>No products found</h3>
-              <p>Try adjusting your filters or searching for something else.</p>
-              <button className="btn-secondary" onClick={() => setFilters({ search: '', category: '', min_price: '', max_price: '', page: 1 })}>
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <div className="product-grid">
-              {products.map(p => <ProductCard key={p.productId || p.product_id} p={p} />)}
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                disabled={filters.page === 1}
-                onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}
-              >
-                ← Previous
-              </button>
-              <span>Page {filters.page} of {totalPages}</span>
-              <button
-                disabled={filters.page === totalPages}
-                onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </>
+      {/* ── Pagination ── */}
+      {totalPages > 1 && (
+        <div className="catalog-pagination">
+          <button
+            className="arrow static"
+            disabled={filters.page === 1}
+            onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <div className="page-numbers">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(n => n === 1 || n === totalPages || Math.abs(n - filters.page) <= 1)
+              .reduce((acc, n, i, arr) => {
+                if (i > 0 && n - arr[i - 1] > 1) acc.push('…');
+                acc.push(n);
+                return acc;
+              }, [])
+              .map((n, i) =>
+                n === '…'
+                  ? <span key={`e${i}`} className="page-ellipsis">…</span>
+                  : <button key={n} className={`page-btn${n === filters.page ? ' active' : ''}`}
+                      onClick={() => setFilters(f => ({ ...f, page: n }))}>{n}</button>
+              )}
+          </div>
+          <button
+            className="arrow static"
+            disabled={filters.page === totalPages}
+            onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
       )}
     </div>
-  );
-}
-
-function Stars({ rating }) {
-  return (
-    <span className="stars">
-      {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#f59e0b' : '#D4D4D8' }}>★</span>
-      ))}
-    </span>
-  );
-}
-
-export function ProductCard({ p }) {
-  const id    = p.productId || p.product_id;
-  const name  = p.name;
-  const qty   = p.quantityOnHand ?? p.quantity_on_hand;
-  const price = p.price;
-  const cat   = p.categoryName || p.category_name;
-  const sup   = p.supplierName || p.supplier_name;
-  const avg   = p.avgRating    || p.avg_rating    || 0;
-  const cnt   = p.reviewCount  || p.review_count  || 0;
-  const active = p.isActive    ?? p.is_active     ?? true;
-  const [added, setAdded] = useState(false);
-
-  const addToCart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const cart = JSON.parse(localStorage.getItem('cartly_cart') || '[]');
-    const existing = cart.find(i => i.product_id === id);
-    if (existing) { existing.quantity += 1; }
-    else { cart.push({ product_id: id, name, price, quantity: 1 }); }
-    localStorage.setItem('cartly_cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('storage'));
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
-
-  return (
-    <Link to={`/products/${id}`} className="product-card">
-      <div className="product-img-wrap">
-        <div className="product-img-placeholder" style={{ background: categoryGradient(cat) }}>
-          <span style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,.18))', transition: 'transform .2s ease' }}>
-            {categoryIcon(cat)}
-          </span>
-        </div>
-        {!active && <span className="badge-inactive">Inactive</span>}
-        {qty <= 5 && qty > 0 && <span className="badge-lowstock">Only {qty} left</span>}
-        {qty === 0 && <span className="badge-oos">Out of stock</span>}
-        {qty !== 0 && active && (
-          <button className={`product-quick-add${added ? ' added' : ''}`} onClick={addToCart}>
-            {added ? '✓ Added to cart' : '+ Add to Cart'}
-          </button>
-        )}
-      </div>
-      <div className="product-info">
-        <p className="product-category">{cat}</p>
-        <h3 className="product-name">{name}</h3>
-        <div className="product-meta">
-          <Stars rating={avg} />
-          <span className="review-count">({cnt})</span>
-        </div>
-        <div className="product-footer">
-          <span className="product-price">₹{Number(price).toLocaleString('en-IN')}</span>
-          <span className="supplier-badge">{sup}</span>
-        </div>
-      </div>
-    </Link>
   );
 }

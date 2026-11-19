@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
 import { categoryIcon, categoryGradient } from '../utils/categoryHelpers';
+import { geminiGenerate } from '../utils/gemini';
+import { Sparkles, Loader2 } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -14,10 +17,22 @@ export default function ProductDetail() {
   const [addMsg, setAddMsg]   = useState('');
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
   const [reviewMsg, setReviewMsg]   = useState('');
+  const [aiSummary, setAiSummary]   = useState('');
+  const [aiSumLoading, setAiSumLoading] = useState(false);
+  const [aiRecs, setAiRecs]         = useState([]);
+  const [aiRecsLoading, setAiRecsLoading] = useState(false);
 
   useEffect(() => {
     api.get(`/products/${id}`)
-      .then(setProduct)
+      .then(p => {
+        setProduct(p);
+        // Track recently viewed
+        const pid = p.productId || p.product_id;
+        const item = { product_id: pid, name: p.name, price: p.price, category_name: p.categoryName || p.category_name || '' };
+        const prev = JSON.parse(localStorage.getItem('cartly_recently_viewed') || '[]');
+        const next = [item, ...prev.filter(x => x.product_id !== pid)].slice(0, 10);
+        localStorage.setItem('cartly_recently_viewed', JSON.stringify(next));
+      })
       .catch(() => navigate('/catalog'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
@@ -35,12 +50,53 @@ export default function ProductDetail() {
     setTimeout(() => setAddMsg(''), 2000);
   };
 
+  // AI: summarize reviews when 3+ exist (delayed to avoid rate limits)
+  useEffect(() => {
+    const revList = product?.reviews || [];
+    if (!product || revList.length < 3 || aiSummary) return;
+    const timer = setTimeout(() => {
+      setAiSumLoading(true);
+      const reviewText = revList.slice(0, 15).map(r => `${r.rating}/5 stars: "${r.comment || r.title || ''}"`).join('\n');
+      geminiGenerate(
+        `Summarize these customer reviews for "${product.name}" in 2 sentences. Mention top pros and any cons. Be specific.\n\n${reviewText}`,
+        { maxOutputTokens: 180 }
+      ).then(setAiSummary).catch(() => {}).finally(() => setAiSumLoading(false));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [product?.productId, (product?.reviews || []).length]);
+
+  // AI: load product recommendations (delayed 3s to avoid colliding with review summary)
+  useEffect(() => {
+    if (!product) return;
+    const catName = product.categoryName || product.category_name || '';
+    const timer = setTimeout(() => {
+      setAiRecsLoading(true);
+      api.get('/products?limit=20').then(async (d) => {
+        const all = d.products || [];
+        const pid = product.productId || product.product_id;
+        const others = all.filter(p => (p.productId || p.product_id) !== pid);
+        const catalog = others.map(p => `ID:${p.productId || p.product_id} ${p.name} ₹${p.price}`).join('\n');
+        const reply = await geminiGenerate(
+          `A customer is viewing "${product.name}" (${catName}, ₹${product.price}). From this product list, pick 3 IDs of products they'd likely also want. Return ONLY a JSON array of 3 numbers, e.g. [1,5,12].\n\nProducts:\n${catalog}`,
+          { temperature: 0.3, maxOutputTokens: 30 }
+        );
+        const match = reply.match(/\[\s*\d+[\s,\d]*\]/);
+        if (match) {
+          const ids = JSON.parse(match[0]);
+          const recs = all.filter(p => ids.includes(p.productId || p.product_id)).slice(0, 3);
+          setAiRecs(recs);
+        }
+      }).catch(() => {}).finally(() => setAiRecsLoading(false));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [product?.productId]);
+
   const submitReview = async (e) => {
     e.preventDefault();
     setReviewMsg('');
     const pid = product.productId || product.product_id;
     try {
-      await api.post('/reviews', { product_id: pid, ...reviewForm });
+      await api.post('/reviews', { productId: pid, ...reviewForm });
       setReviewMsg('Review submitted!');
       const updated = await api.get(`/products/${id}`);
       setProduct(updated);
@@ -103,7 +159,7 @@ export default function ProductDetail() {
             </div>
           )}
           {!user && (
-            <p className="auth-hint"><a href="/login">Sign in</a> to purchase</p>
+            <p className="auth-hint"><Link to="/login">Sign in</Link> to purchase</p>
           )}
 
           <div className="spec-box">
@@ -114,9 +170,35 @@ export default function ProductDetail() {
         </div>
       </div>
 
+      {/* AI Recommendations */}
+      {(aiRecsLoading || aiRecs.length > 0) && (
+        <div className="ai-section">
+          <h2 className="ai-section-title"><Sparkles size={16} /> AI Picks For You</h2>
+          {aiRecsLoading ? (
+            <div className="ai-loading-row"><Loader2 size={18} className="ai-spin" /> Finding similar products…</div>
+          ) : (
+            <div className="grid-4" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              {aiRecs.map(p => <ProductCard key={p.productId || p.product_id} p={p} />)}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Reviews */}
       <div className="reviews-section">
         <h2>Customer Reviews</h2>
+
+        {/* AI Review Summary */}
+        {(aiSumLoading || aiSummary) && (
+          <div className="ai-review-summary">
+            <span className="ai-badge"><Sparkles size={12} /> AI Summary</span>
+            {aiSumLoading
+              ? <span className="ai-sum-loading"><Loader2 size={14} className="ai-spin" /> Analysing reviews…</span>
+              : <p>{aiSummary}</p>
+            }
+          </div>
+        )}
+
         {reviews.length === 0 && <p className="empty">No reviews yet.</p>}
         <div className="review-list">
           {reviews.map(r => {
